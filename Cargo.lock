@@ -4165,7 +4165,6 @@ dependencies = [
 [[package]]
 name = "rlbox_lucet_sandbox"
 version = "0.1.0"
-source = "git+https://github.com/PLSysSec/rlbox_lucet_sandbox/?rev=ed8bac8812e9f335d5fadd0f4ece96981aba88a3#ed8bac8812e9f335d5fadd0f4ece96981aba88a3"
 dependencies = [
  "failure",
  "goblin",

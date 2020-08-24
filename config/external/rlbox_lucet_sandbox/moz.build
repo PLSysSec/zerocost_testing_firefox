@@ -5,11 +5,17 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 EXPORTS.mozilla.rlbox += [
-    '/third_party/rust/rlbox_lucet_sandbox/include/lucet_sandbox.h',
-    '/third_party/rust/rlbox_lucet_sandbox/include/rlbox_lucet_sandbox.hpp',
+    '/../zerocost_testing_sandbox/include/lucet_sandbox.h',
+    '/../zerocost_testing_sandbox/include/rlbox_lucet_sandbox.hpp'
+]
+
+EXPORTS += [
+    '/../zerocost_testing_sandbox/include/lucet_zero_trampoline.h'
 ]
 
 SOURCES += [
+    '/../zerocost_testing_sandbox/c_src/trampoline_asm.S',
+    '/../zerocost_testing_sandbox/c_src/trampoline_c.c',
     'rlbox_lucet_thread_locals.cpp'
 ]
 
