@@ -37,4 +37,6 @@ struct rlbox_shared_lock {
 // fixed.
 #define RLBOX_EMBEDDER_PROVIDES_TLS_STATIC_VARIABLES
 
+#define RLBOX_MEASURE_TRANSITION_TIMES
+
 #endif
