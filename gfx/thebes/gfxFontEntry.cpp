@@ -49,6 +49,9 @@
 
 #include <algorithm>
 
+#include <sys/types.h>
+#include <unistd.h>
+
 using namespace mozilla;
 using namespace mozilla::gfx;
 using namespace mozilla::unicode;
@@ -649,6 +652,12 @@ struct gfxFontEntry::GrSandboxData {
     grGetTableCallback.unregister();
     grReleaseTableCallback.unregister();
     grGetGlyphAdvanceCallback.unregister();
+    auto& transition_times = sandbox.process_and_get_transition_times();
+    for (auto& transition_time: transition_times) {
+      printf("!!!TIMING: %s\n", transition_time.to_string().c_str());
+    }
+    auto total_time = sandbox.get_total_ns_time_in_sandbox_and_transitions();
+    std::cout << "!!!Total TIMING: " << total_time << " ns\n";
     sandbox.destroy_sandbox();
   }
 };
@@ -717,7 +726,7 @@ tainted_opaque_gr<gr_face*> gfxFontEntry::GetGrFace() {
     // If Thebes is updated to make callst to the sandbox on multiple threaads,
     // we need to make sure the underlying sandbox supports threading.
     MOZ_ASSERT(NS_IsMainThread());
-
+    printf("!!!!!!!!!!!!!Graphite sandbox pid: %llu\n", (unsigned long long) getpid());
     mSandboxData = new GrSandboxData();
 
     auto p_faceOps = mSandboxData->sandbox.malloc_in_sandbox<gr_face_ops>();
