@@ -31,6 +31,15 @@ typedef struct {
   jmp_buf setjmp_buffer;      // For handling catastropic errors
 } decoder_error_mgr;
 
+}
+}
+
+typedef mozilla::image::decoder_error_mgr decoder_error_mgr;
+
+#include "JpegRLBoxTypes.h"
+
+namespace mozilla {
+namespace image {
 typedef enum {
   JPEG_HEADER,  // Reading JFIF headers
   JPEG_START_DECOMPRESS,
@@ -79,9 +88,19 @@ class nsJPEGDecoder : public Decoder {
 
   StreamingLexer<State> mLexer;
 
+public:
+  rlbox_sandbox_jpeg* mSandbox;
+private:
+  sandbox_callback_jpeg<void(*)(jpeg_decompress_struct *)>* m_init_source_cb;
+  sandbox_callback_jpeg<void(*)(j_decompress_ptr)>* m_term_source_cb;
+  sandbox_callback_jpeg<void(*)(j_decompress_ptr, long)>* m_skip_input_data_cb;
+  sandbox_callback_jpeg<boolean(*)(j_decompress_ptr)>* m_fill_input_buffer_cb;
+
+  void getRLBoxSandbox();
+
  public:
-  struct jpeg_decompress_struct mInfo;
-  struct jpeg_source_mgr mSourceMgr;
+  tainted_opaque_jpeg<jpeg_decompress_struct*> p_mInfo;
+  tainted_opaque_jpeg<jpeg_source_mgr*> p_mSourceMgr;
   decoder_error_mgr mErr;
   jstate mState;
 

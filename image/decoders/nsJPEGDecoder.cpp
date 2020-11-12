@@ -9,6 +9,7 @@
 #include "nsJPEGDecoder.h"
 
 #include <cstdint>
+#include <mutex>
 
 #include "imgFrame.h"
 #include "Orientation.h"
@@ -25,6 +26,8 @@
 #include "mozilla/EndianUtils.h"
 #include "mozilla/gfx/Types.h"
 #include "mozilla/Telemetry.h"
+
+#include "JpegRLBox.h"
 
 extern "C" {
 #include "iccjpeg.h"
@@ -49,6 +52,8 @@ static mozilla::LazyLogModule sJPEGLog("JPEGDecoder");
 static mozilla::LazyLogModule sJPEGDecoderAccountingLog(
     "JPEGDecoderAccounting");
 
+static thread_local void* jpegRendererSaved = nullptr;
+
 static qcms_profile* GetICCProfile(struct jpeg_decompress_struct& info) {
   JOCTET* profilebuf;
   uint32_t profileLength;
@@ -62,14 +67,37 @@ static qcms_profile* GetICCProfile(struct jpeg_decompress_struct& info) {
   return profile;
 }
 
-METHODDEF(void) init_source(j_decompress_ptr jd);
-METHODDEF(boolean) fill_input_buffer(j_decompress_ptr jd);
-METHODDEF(void) skip_input_data(j_decompress_ptr jd, long num_bytes);
-METHODDEF(void) term_source(j_decompress_ptr jd);
+METHODDEF(void) init_source(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd);
+METHODDEF(tainted_jpeg<boolean>) fill_input_buffer(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd);
+METHODDEF(void) skip_input_data(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd,tainted_jpeg<long> num_bytes);
+METHODDEF(void) term_source(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd);
 METHODDEF(void) my_error_exit(j_common_ptr cinfo);
 
 // Normal JFIF markers can't have more bytes than this.
 #define MAX_JPEG_MARKER_LENGTH (((uint32_t)1 << 16) - 1)
+
+std::once_flag create_rlbox_flag;
+
+void nsJPEGDecoder::getRLBoxSandbox() {
+  static rlbox_sandbox_jpeg sandbox;
+  static sandbox_callback_jpeg<void(*)(jpeg_decompress_struct *)> init_source_cb;
+  static sandbox_callback_jpeg<void(*)(j_decompress_ptr)> term_source_cb;
+  static sandbox_callback_jpeg<void(*)(j_decompress_ptr, long)> skip_input_data_cb;
+  static sandbox_callback_jpeg<boolean(*)(j_decompress_ptr)> fill_input_buffer_cb;
+
+  std::call_once(create_rlbox_flag, [&](){
+    sandbox.create_sandbox();
+    init_source_cb = sandbox.register_callback(init_source);
+    term_source_cb = sandbox.register_callback(term_source);
+    skip_input_data_cb = sandbox.register_callback(skip_input_data);
+    fill_input_buffer_cb = sandbox.register_callback(fill_input_buffer);
+  });
+  mSandbox = &sandbox;
+  m_init_source_cb = &init_source_cb;
+  m_term_source_cb = &term_source_cb;
+  m_skip_input_data_cb = &skip_input_data_cb;
+  m_fill_input_buffer_cb = &fill_input_buffer_cb;
+}
 
 nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
                              Decoder::DecodeStyle aDecodeStyle)
@@ -81,6 +109,14 @@ nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
       mProfileLength(0),
       mCMSLine(nullptr),
       mDecodeStyle(aDecodeStyle) {
+  getRLBoxSandbox();
+  auto mInfo_obj = mSandbox->malloc_in_sandbox<jpeg_decompress_struct>();
+  auto& mInfo = *mInfo_obj;
+  auto mSourceMgr_obj = mSandbox->malloc_in_sandbox<jpeg_source_mgr>();
+  auto& mSourceMgr = *mSourceMgr_obj;
+
+  this->p_mInfo = mInfo_obj.to_opaque();
+  this->p_mSourceMgr = mSourceMgr_obj.to_opaque();
   this->mErr.pub.error_exit = nullptr;
   this->mErr.pub.emit_message = nullptr;
   this->mErr.pub.output_message = nullptr;
@@ -99,9 +135,9 @@ nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
   mImageData = nullptr;
 
   mBytesToSkip = 0;
-  memset(&mInfo, 0, sizeof(jpeg_decompress_struct));
-  memset(&mSourceMgr, 0, sizeof(mSourceMgr));
-  mInfo.client_data = (void*)this;
+  rlbox::memset(*mSandbox, &mInfo, 0, sizeof(tainted_jpeg<jpeg_decompress_struct>));
+  rlbox::memset(*mSandbox, &mSourceMgr, 0, sizeof(tainted_jpeg<jpeg_source_mgr>));
+  mInfo.client_data = mSandbox->UNSAFE_accept_pointer((void*) this);
 
   mSegment = nullptr;
   mSegmentLen = 0;
@@ -114,9 +150,10 @@ nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
 }
 
 nsJPEGDecoder::~nsJPEGDecoder() {
+  auto& mInfo = *rlbox::from_opaque(p_mInfo);
   // Step 8: Release JPEG decompression object
   mInfo.src = nullptr;
-  jpeg_destroy_decompress(&mInfo);
+  sandbox_invoke(*mSandbox, jpeg_destroy_decompress, &mInfo);
 
   free(mBackBuffer);
   mBackBuffer = nullptr;
@@ -132,8 +169,10 @@ Maybe<Telemetry::HistogramID> nsJPEGDecoder::SpeedHistogram() const {
 }
 
 nsresult nsJPEGDecoder::InitInternal() {
+  auto& mInfo = *rlbox::from_opaque(p_mInfo);
+  auto& mSourceMgr = *rlbox::from_opaque(p_mSourceMgr);
   // We set up the normal JPEG error routines, then override error_exit.
-  mInfo.err = jpeg_std_error(&mErr.pub);
+  mInfo.err = sandbox_invoke(*mSandbox, jpeg_std_error, mSandbox->UNSAFE_accept_pointer(&mErr.pub));
   //   mInfo.err = jpeg_std_error(&mErr.pub);
   mErr.pub.error_exit = my_error_exit;
   // Establish the setjmp return context for my_error_exit to use.
@@ -144,22 +183,22 @@ nsresult nsJPEGDecoder::InitInternal() {
   }
 
   // Step 1: allocate and initialize JPEG decompression object
-  jpeg_create_decompress(&mInfo);
+  sandbox_invoke(*mSandbox, jpeg_CreateDecompress, &mInfo, JPEG_LIB_VERSION, sizeof(tainted_jpeg<jpeg_decompress_struct>));
   // Set the source manager
   mInfo.src = &mSourceMgr;
 
   // Step 2: specify data source (eg, a file)
 
   // Setup callback functions.
-  mSourceMgr.init_source = init_source;
-  mSourceMgr.fill_input_buffer = fill_input_buffer;
-  mSourceMgr.skip_input_data = skip_input_data;
-  mSourceMgr.resync_to_restart = jpeg_resync_to_restart;
-  mSourceMgr.term_source = term_source;
+  mSourceMgr.init_source = *m_init_source_cb;
+  mSourceMgr.fill_input_buffer = *m_fill_input_buffer_cb;
+  mSourceMgr.skip_input_data = *m_skip_input_data_cb;
+  mSourceMgr.resync_to_restart = mSandbox->get_sandbox_function_address(jpeg_resync_to_restart);
+  mSourceMgr.term_source = *m_term_source_cb;
 
   // Record app markers for ICC data
   for (uint32_t m = 0; m < 16; m++) {
-    jpeg_save_markers(&mInfo, JPEG_APP0 + m, 0xFFFF);
+    sandbox_invoke(*mSandbox, jpeg_save_markers, &mInfo, JPEG_APP0 + m, 0xFFFF);
   }
 
   return NS_OK;
@@ -172,6 +211,7 @@ nsresult nsJPEGDecoder::FinishInternal() {
     mState = JPEG_DONE;
   }
 
+  jpegRendererSaved = nullptr;
   return NS_OK;
 }
 
@@ -193,6 +233,8 @@ LexerResult nsJPEGDecoder::DoDecode(SourceBufferIterator& aIterator,
 
 LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
     const char* aData, size_t aLength) {
+  jpegRendererSaved = this;
+  auto& mInfo = *rlbox::from_opaque(p_mInfo);
   mSegment = reinterpret_cast<const JOCTET*>(aData);
   mSegmentLen = aLength;
 
@@ -227,8 +269,9 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
                 "nsJPEGDecoder::Write -- entering JPEG_HEADER"
                 " case");
 
+      auto status = sandbox_invoke(*mSandbox, jpeg_read_header, &mInfo, TRUE);
       // Step 3: read file parameters with jpeg_read_header()
-      if (jpeg_read_header(&mInfo, TRUE) == JPEG_SUSPENDED) {
+      if (status.UNSAFE_unverified() == JPEG_SUSPENDED) {
         MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
                 ("} (JPEG_SUSPENDED)"));
         return Transition::ContinueUnbuffered(
@@ -236,7 +279,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
       }
 
       // Post our size to the superclass
-      PostSize(mInfo.image_width, mInfo.image_height,
+      PostSize(mInfo.image_width.UNSAFE_unverified(), mInfo.image_height.UNSAFE_unverified(),
                ReadOrientationFromEXIF());
       if (HasError()) {
         // Setting the size led to an error.
@@ -250,7 +293,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
       }
 
       // We're doing a full decode.
-      switch (mInfo.jpeg_color_space) {
+      switch (mInfo.jpeg_color_space.UNSAFE_unverified()) {
         case JCS_GRAYSCALE:
         case JCS_RGB:
         case JCS_YCbCr:
@@ -284,7 +327,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
       }
 
       if (mCMSMode != eCMSMode_Off) {
-        if ((mInProfile = GetICCProfile(mInfo)) != nullptr &&
+        if ((mInProfile = GetICCProfile(*((&mInfo).UNSAFE_unverified()))) != nullptr &&
             GetCMSOutputProfile()) {
           uint32_t profileSpace = qcms_profile_get_color_space(mInProfile);
 
@@ -295,7 +338,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
             // end of the pipeline.
             inputType.emplace(outputType);
           } else if (profileSpace == icSigGrayData &&
-                     mInfo.jpeg_color_space == JCS_GRAYSCALE) {
+                     mInfo.jpeg_color_space.UNSAFE_unverified() == JCS_GRAYSCALE) {
             // We can only color manage gray profiles if the original color
             // space is grayscale. This means we must downscale after color
             // management since the downscaler assumes BGRA.
@@ -333,9 +376,9 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
 
       // We don't want to use the pipe buffers directly because we don't want
       // any reads on non-BGRA formatted data.
-      if (mInfo.out_color_space == JCS_GRAYSCALE ||
-          mInfo.out_color_space == JCS_CMYK) {
-        mCMSLine = new (std::nothrow) uint32_t[mInfo.image_width];
+      if (mInfo.out_color_space.UNSAFE_unverified() == JCS_GRAYSCALE ||
+          mInfo.out_color_space.UNSAFE_unverified() == JCS_CMYK) {
+        mCMSLine = new (std::nothrow) uint32_t[mInfo.image_width.UNSAFE_unverified()];
         if (!mCMSLine) {
           mState = JPEG_ERROR;
           MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
@@ -347,17 +390,17 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
       // Don't allocate a giant and superfluous memory buffer
       // when not doing a progressive decode.
       mInfo.buffered_image =
-          mDecodeStyle == PROGRESSIVE && jpeg_has_multiple_scans(&mInfo);
+          mDecodeStyle == PROGRESSIVE && sandbox_invoke(*mSandbox, jpeg_has_multiple_scans, &mInfo).UNSAFE_unverified();
 
       /* Used to set up image size so arrays can be allocated */
-      jpeg_calc_output_dimensions(&mInfo);
+      sandbox_invoke(*mSandbox, jpeg_calc_output_dimensions, &mInfo);
 
       // We handle the transform outside the pipeline if we are outputting in
       // grayscale, because the pipeline wants BGRA pixels, particularly the
       // downscaling filter, so we can't handle it after downscaling as would
       // be optimal.
       qcms_transform* pipeTransform =
-          mInfo.out_color_space != JCS_GRAYSCALE ? mTransform : nullptr;
+          mInfo.out_color_space.UNSAFE_unverified() != JCS_GRAYSCALE ? mTransform : nullptr;
 
       Maybe<SurfacePipe> pipe = SurfacePipeFactory::CreateSurfacePipe(
           this, Size(), OutputSize(), FullFrame(), SurfaceFormat::OS_RGBX,
@@ -374,7 +417,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
       MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
               ("        JPEGDecoderAccounting: nsJPEGDecoder::"
                "Write -- created image frame with %ux%u pixels",
-               mInfo.image_width, mInfo.image_height));
+               mInfo.image_width.UNSAFE_unverified(), mInfo.image_height.UNSAFE_unverified()));
 
       mState = JPEG_START_DECOMPRESS;
       [[fallthrough]];  // to start decompressing.
@@ -396,7 +439,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
       mInfo.do_block_smoothing = TRUE;
 
       // Step 5: Start decompressor
-      if (jpeg_start_decompress(&mInfo) == FALSE) {
+      if (sandbox_invoke(*mSandbox, jpeg_start_decompress, &mInfo).UNSAFE_unverified() == FALSE) {
         MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
                 ("} (I/O suspension after jpeg_start_decompress())"));
         return Transition::ContinueUnbuffered(
@@ -404,7 +447,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
       }
 
       // If this is a progressive JPEG ...
-      mState = mInfo.buffered_image ? JPEG_DECOMPRESS_PROGRESSIVE
+      mState = mInfo.buffered_image.UNSAFE_unverified() ? JPEG_DECOMPRESS_PROGRESSIVE
                                     : JPEG_DECOMPRESS_SEQUENTIAL;
       [[fallthrough]];  // to decompress sequential JPEG.
     }
@@ -423,7 +466,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
             return Transition::ContinueUnbuffered(
                 State::JPEG_DATA);  // I/O suspension
           case WriteState::FINISHED:
-            NS_ASSERTION(mInfo.output_scanline == mInfo.output_height,
+            NS_ASSERTION(mInfo.output_scanline.UNSAFE_unverified() == mInfo.output_height.UNSAFE_unverified(),
                          "We didn't process all of the data!");
             mState = JPEG_DONE;
             break;
@@ -444,21 +487,21 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
 
         int status;
         do {
-          status = jpeg_consume_input(&mInfo);
+          status = sandbox_invoke(*mSandbox, jpeg_consume_input, &mInfo).UNSAFE_unverified();
         } while ((status != JPEG_SUSPENDED) && (status != JPEG_REACHED_EOI));
 
         while (mState != JPEG_DONE) {
-          if (mInfo.output_scanline == 0) {
-            int scan = mInfo.input_scan_number;
+          if (mInfo.output_scanline.UNSAFE_unverified() == 0) {
+            int scan = mInfo.input_scan_number.UNSAFE_unverified();
 
             // if we haven't displayed anything yet (output_scan_number==0)
             // and we have enough data for a complete scan, force output
             // of the last full scan
-            if ((mInfo.output_scan_number == 0) && (scan > 1) &&
+            if ((mInfo.output_scan_number.UNSAFE_unverified() == 0) && (scan > 1) &&
                 (status != JPEG_REACHED_EOI))
               scan--;
 
-            if (!jpeg_start_output(&mInfo, scan)) {
+            if (!sandbox_invoke(*mSandbox, jpeg_start_output, &mInfo, scan).UNSAFE_unverified()) {
               MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
                       ("} (I/O suspension after jpeg_start_output() -"
                        " PROGRESSIVE)"));
@@ -467,13 +510,13 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
             }
           }
 
-          if (mInfo.output_scanline == 0xffffff) {
+          if (mInfo.output_scanline.UNSAFE_unverified() == 0xffffff) {
             mInfo.output_scanline = 0;
           }
 
           switch (OutputScanlines()) {
             case WriteState::NEED_MORE_DATA:
-              if (mInfo.output_scanline == 0) {
+              if (mInfo.output_scanline.UNSAFE_unverified() == 0) {
                 // didn't manage to read any lines - flag so we don't call
                 // jpeg_start_output() multiple times for the same scan
                 mInfo.output_scanline = 0xffffff;
@@ -484,10 +527,10 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
               return Transition::ContinueUnbuffered(
                   State::JPEG_DATA);  // I/O suspension
             case WriteState::FINISHED:
-              NS_ASSERTION(mInfo.output_scanline == mInfo.output_height,
+              NS_ASSERTION((mInfo.output_scanline == mInfo.output_height).UNSAFE_unverified(),
                            "We didn't process all of the data!");
 
-              if (!jpeg_finish_output(&mInfo)) {
+              if (!sandbox_invoke(*mSandbox, jpeg_finish_output, &mInfo).UNSAFE_unverified()) {
                 MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
                         ("} (I/O suspension after jpeg_finish_output() -"
                          " PROGRESSIVE)"));
@@ -495,8 +538,8 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
                     State::JPEG_DATA);  // I/O suspension
               }
 
-              if (jpeg_input_complete(&mInfo) &&
-                  (mInfo.input_scan_number == mInfo.output_scan_number)) {
+              if (sandbox_invoke(*mSandbox, jpeg_input_complete, &mInfo).UNSAFE_unverified() &&
+                  (mInfo.input_scan_number.UNSAFE_unverified() == mInfo.output_scan_number.UNSAFE_unverified())) {
                 mState = JPEG_DONE;
               } else {
                 mInfo.output_scanline = 0;
@@ -521,7 +564,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
 
       // Step 7: Finish decompression
 
-      if (jpeg_finish_decompress(&mInfo) == FALSE) {
+      if (sandbox_invoke(*mSandbox, jpeg_finish_decompress, &mInfo).UNSAFE_unverified() == FALSE) {
         MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
                 ("} (I/O suspension after jpeg_finish_decompress() - DONE)"));
         return Transition::ContinueUnbuffered(
@@ -567,9 +610,10 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::FinishedJPEGData() {
 
 Orientation nsJPEGDecoder::ReadOrientationFromEXIF() {
   jpeg_saved_marker_ptr marker;
+  auto& mInfo = *rlbox::from_opaque(p_mInfo);
 
   // Locate the APP1 marker, where EXIF data is stored, in the marker list.
-  for (marker = mInfo.marker_list; marker != nullptr; marker = marker->next) {
+  for (marker = mInfo.marker_list.UNSAFE_unverified(); marker != nullptr; marker = marker->next) {
     if (marker->marker == JPEG_APP0 + 1) {
       break;
     }
@@ -592,14 +636,15 @@ void nsJPEGDecoder::NotifyDone() {
 }
 
 WriteState nsJPEGDecoder::OutputScanlines() {
+  auto& mInfo = *rlbox::from_opaque(p_mInfo);
   auto result = mPipe.WritePixelBlocks<uint32_t>(
       [&](uint32_t* aPixelBlock, int32_t aBlockSize) {
         JSAMPROW sampleRow = (JSAMPROW)(mCMSLine ? mCMSLine : aPixelBlock);
-        if (jpeg_read_scanlines(&mInfo, &sampleRow, 1) != 1) {
+        if (sandbox_invoke(*mSandbox, jpeg_read_scanlines, &mInfo, mSandbox->UNSAFE_accept_pointer(&sampleRow), 1).UNSAFE_unverified() != 1) {
           return MakeTuple(/* aWritten */ 0, Some(WriteState::NEED_MORE_DATA));
         }
 
-        switch (mInfo.out_color_space) {
+        switch (mInfo.out_color_space.UNSAFE_unverified()) {
           default:
             // Already outputted directly to aPixelBlock as BGRA.
             MOZ_ASSERT(!mCMSLine);
@@ -611,7 +656,7 @@ WriteState nsJPEGDecoder::OutputScanlines() {
             // other filters (e.g. DownscalingFilter) require BGRA pixels.
             MOZ_ASSERT(mCMSLine);
             qcms_transform_data(mTransform, mCMSLine, aPixelBlock,
-                                mInfo.output_width);
+                                mInfo.output_width.UNSAFE_unverified());
             break;
           case JCS_CMYK:
             // Convert from CMYK to BGRA
@@ -697,7 +742,8 @@ my_error_exit(j_common_ptr cinfo) {
         will occur immediately).
 */
 METHODDEF(void)
-init_source(j_decompress_ptr jd) {}
+init_source(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd) {}
+
 
 /******************************************************************************/
 /* data source manager method
@@ -711,9 +757,10 @@ init_source(j_decompress_ptr jd) {}
         A zero or negative skip count should be treated as a no-op.
 */
 METHODDEF(void)
-skip_input_data(j_decompress_ptr jd, long num_bytes) {
-  struct jpeg_source_mgr* src = jd->src;
-  nsJPEGDecoder* decoder = (nsJPEGDecoder*)(jd->client_data);
+skip_input_data(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd, tainted_jpeg<long> t_num_bytes) {
+  struct jpeg_source_mgr* src = jd->src.UNSAFE_unverified();
+  auto num_bytes = t_num_bytes.UNSAFE_unverified();
+  nsJPEGDecoder* decoder = (nsJPEGDecoder*)(jd->client_data.UNSAFE_unverified());
 
   if (num_bytes > (long)src->bytes_in_buffer) {
     // Can't skip it all right now until we get more data from
@@ -743,10 +790,10 @@ skip_input_data(j_decompress_ptr jd, long num_bytes) {
         if TRUE is returned.  A FALSE return should only be used when I/O
         suspension is desired.
 */
-METHODDEF(boolean)
-fill_input_buffer(j_decompress_ptr jd) {
-  struct jpeg_source_mgr* src = jd->src;
-  nsJPEGDecoder* decoder = (nsJPEGDecoder*)(jd->client_data);
+METHODDEF(tainted_jpeg<boolean>)
+fill_input_buffer(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd) {
+  tainted_jpeg<jpeg_source_mgr*> src = jd->src;
+  nsJPEGDecoder* decoder = (nsJPEGDecoder*)(jd->client_data.UNSAFE_unverified());
 
   if (decoder->mReading) {
     const JOCTET* new_buffer = decoder->mSegment;
@@ -771,16 +818,16 @@ fill_input_buffer(j_decompress_ptr jd) {
       }
     }
 
-    decoder->mBackBufferUnreadLen = src->bytes_in_buffer;
+    decoder->mBackBufferUnreadLen = src->bytes_in_buffer.UNSAFE_unverified();
 
-    src->next_input_byte = new_buffer;
+    src->next_input_byte = decoder->mSandbox->UNSAFE_accept_pointer(new_buffer);
     src->bytes_in_buffer = (size_t)new_buflen;
     decoder->mReading = false;
 
     return true;
   }
 
-  if (src->next_input_byte != decoder->mSegment) {
+  if (src->next_input_byte.UNSAFE_unverified() != decoder->mSegment) {
     // Backtrack data has been permanently consumed.
     decoder->mBackBufferUnreadLen = 0;
     decoder->mBackBufferLen = 0;
@@ -788,14 +835,15 @@ fill_input_buffer(j_decompress_ptr jd) {
 
   // Save remainder of netlib buffer in backtrack buffer
   const uint32_t new_backtrack_buflen =
-      src->bytes_in_buffer + decoder->mBackBufferLen;
+      src->bytes_in_buffer.UNSAFE_unverified() + decoder->mBackBufferLen;
 
   // Make sure backtrack buffer is big enough to hold new data.
   if (decoder->mBackBufferSize < new_backtrack_buflen) {
     // Check for malformed MARKER segment lengths, before allocating space
     // for it
+    auto& mInfo = *rlbox::from_opaque(decoder->p_mInfo);
     if (new_backtrack_buflen > MAX_JPEG_MARKER_LENGTH) {
-      my_error_exit((j_common_ptr)(&decoder->mInfo));
+      my_error_exit((j_common_ptr)(&mInfo).UNSAFE_unverified());
     }
 
     // Round up to multiple of 256 bytes.
@@ -803,8 +851,8 @@ fill_input_buffer(j_decompress_ptr jd) {
     JOCTET* buf = (JOCTET*)realloc(decoder->mBackBuffer, roundup_buflen);
     // Check for OOM
     if (!buf) {
-      decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
-      my_error_exit((j_common_ptr)(&decoder->mInfo));
+      mInfo.err->msg_code = (int) JERR_OUT_OF_MEMORY;
+      my_error_exit((j_common_ptr)(&mInfo).UNSAFE_unverified());
     }
     decoder->mBackBuffer = buf;
     decoder->mBackBufferSize = roundup_buflen;
@@ -815,16 +863,16 @@ fill_input_buffer(j_decompress_ptr jd) {
   if (decoder->mBackBuffer) {
     // Copy remainder of netlib segment into backtrack buffer.
     memmove(decoder->mBackBuffer + decoder->mBackBufferLen,
-            src->next_input_byte, src->bytes_in_buffer);
+            src->next_input_byte.UNSAFE_unverified(), src->bytes_in_buffer.UNSAFE_unverified());
   } else {
-    MOZ_ASSERT(src->bytes_in_buffer == 0);
+    MOZ_ASSERT(src->bytes_in_buffer.UNSAFE_unverified() == 0);
     MOZ_ASSERT(decoder->mBackBufferLen == 0);
     MOZ_ASSERT(decoder->mBackBufferUnreadLen == 0);
   }
 
   // Point to start of data to be rescanned.
-  src->next_input_byte = decoder->mBackBuffer + decoder->mBackBufferLen -
-                         decoder->mBackBufferUnreadLen;
+  src->next_input_byte = decoder->mSandbox->UNSAFE_accept_pointer(
+    decoder->mBackBuffer + decoder->mBackBufferLen - decoder->mBackBufferUnreadLen);
   src->bytes_in_buffer += decoder->mBackBufferUnreadLen;
   decoder->mBackBufferLen = (size_t)new_backtrack_buflen;
   decoder->mReading = true;
@@ -840,8 +888,8 @@ fill_input_buffer(j_decompress_ptr jd) {
  * jpeg_abort() or jpeg_destroy().
  */
 METHODDEF(void)
-term_source(j_decompress_ptr jd) {
-  nsJPEGDecoder* decoder = (nsJPEGDecoder*)(jd->client_data);
+term_source(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd) {
+  nsJPEGDecoder* decoder = (nsJPEGDecoder*)(jd->client_data.UNSAFE_unverified());
 
   // This function shouldn't be called if we ran into an error we didn't
   // recover from.

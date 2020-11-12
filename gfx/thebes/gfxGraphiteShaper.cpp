@@ -51,6 +51,7 @@ gfxGraphiteShaper::gfxGraphiteShaper(gfxFont* aFont)
 }
 
 gfxGraphiteShaper::~gfxGraphiteShaper() {
+  // std::cout << "!!!!!!!!!!!!!!~gfxGraphiteShaper\n";
   auto t_mGrFont = rlbox::from_opaque(mGrFont);
   if (t_mGrFont) {
     sandbox_invoke(*mSandbox, gr_font_destroy, t_mGrFont);
@@ -252,7 +253,7 @@ bool gfxGraphiteShaper::ShapeText(DrawTarget* aDrawTarget,
                            t_aText.to_opaque(), seg.to_opaque(), aRounding);
 
   sandbox_invoke(*mSandbox, gr_seg_destroy, seg);
-
+  // std::cout << "!!!!!!!!!!!!!!ShapeText\n";
   return NS_SUCCEEDED(rv);
 }
 
@@ -444,6 +445,7 @@ nsresult gfxGraphiteShaper::SetGlyphsFromSegment(
   }
 
   sandbox_invoke(*mSandbox, gr_free_char_association, data);
+  // std::cout << "!!!!!!!!!!!!!!SetGlyphsFromSegment\n";
   return NS_OK;
 }
 
