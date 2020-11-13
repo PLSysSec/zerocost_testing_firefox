@@ -50,6 +50,9 @@ public:
   using T_IntType = int;
   using T_PointerType = uintptr_t;
   using T_ShortType = short;
+  // no-op sandbox can transfer buffers as there is no sandboxings
+  // Thus transfer is a noop
+  using can_grant_deny_access = void;
 
 private:
   RLBOX_SHARED_LOCK(callback_mutex);
@@ -224,6 +227,22 @@ protected:
         break;
       }
     }
+  }
+
+  template<typename T>
+  inline T* impl_grant_access(T* src, size_t num, bool& success)
+  {
+    RLBOX_UNUSED(num);
+    success = true;
+    return src;
+  }
+
+  template<typename T>
+  inline T* impl_deny_access(T* src, size_t num, bool& success)
+  {
+    RLBOX_UNUSED(num);
+    success = true;
+    return src;
   }
 };
 
