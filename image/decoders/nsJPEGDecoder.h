@@ -28,7 +28,7 @@ namespace image {
 
 typedef struct {
   struct jpeg_error_mgr pub;  // "public" fields for IJG library
-  jmp_buf setjmp_buffer;      // For handling catastropic errors
+  // jmp_buf setjmp_buffer;      // For handling catastropic errors
 } decoder_error_mgr;
 
 }
@@ -95,12 +95,14 @@ private:
   sandbox_callback_jpeg<void(*)(j_decompress_ptr)>* m_term_source_cb;
   sandbox_callback_jpeg<void(*)(j_decompress_ptr, long)>* m_skip_input_data_cb;
   sandbox_callback_jpeg<boolean(*)(j_decompress_ptr)>* m_fill_input_buffer_cb;
+  sandbox_callback_jpeg<void(*)(j_common_ptr)>* m_my_error_exit_cb;
 
   void getRLBoxSandbox();
 
  public:
   tainted_opaque_jpeg<jpeg_decompress_struct*> p_mInfo;
   tainted_opaque_jpeg<jpeg_source_mgr*> p_mSourceMgr;
+  tainted_opaque_jpeg<decoder_error_mgr*> p_mErr;
   decoder_error_mgr mErr;
   jstate mState;
 

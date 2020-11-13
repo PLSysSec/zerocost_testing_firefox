@@ -71,7 +71,7 @@ METHODDEF(void) init_source(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompr
 METHODDEF(tainted_jpeg<boolean>) fill_input_buffer(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd);
 METHODDEF(void) skip_input_data(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd,tainted_jpeg<long> num_bytes);
 METHODDEF(void) term_source(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd);
-METHODDEF(void) my_error_exit(j_common_ptr cinfo);
+METHODDEF(void) my_error_exit(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_common_ptr> cinfo);
 
 // Normal JFIF markers can't have more bytes than this.
 #define MAX_JPEG_MARKER_LENGTH (((uint32_t)1 << 16) - 1)
@@ -84,6 +84,7 @@ void nsJPEGDecoder::getRLBoxSandbox() {
   static sandbox_callback_jpeg<void(*)(j_decompress_ptr)> term_source_cb;
   static sandbox_callback_jpeg<void(*)(j_decompress_ptr, long)> skip_input_data_cb;
   static sandbox_callback_jpeg<boolean(*)(j_decompress_ptr)> fill_input_buffer_cb;
+  static sandbox_callback_jpeg<void(*)(j_common_ptr)> my_error_exit_cb;
 
   std::call_once(create_rlbox_flag, [&](){
     sandbox.create_sandbox();
@@ -91,12 +92,14 @@ void nsJPEGDecoder::getRLBoxSandbox() {
     term_source_cb = sandbox.register_callback(term_source);
     skip_input_data_cb = sandbox.register_callback(skip_input_data);
     fill_input_buffer_cb = sandbox.register_callback(fill_input_buffer);
+    my_error_exit_cb = sandbox.register_callback(my_error_exit);
   });
   mSandbox = &sandbox;
   m_init_source_cb = &init_source_cb;
   m_term_source_cb = &term_source_cb;
   m_skip_input_data_cb = &skip_input_data_cb;
   m_fill_input_buffer_cb = &fill_input_buffer_cb;
+  m_my_error_exit_cb = &my_error_exit_cb;
 }
 
 nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
@@ -114,22 +117,25 @@ nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
   auto& mInfo = *mInfo_obj;
   auto mSourceMgr_obj = mSandbox->malloc_in_sandbox<jpeg_source_mgr>();
   auto& mSourceMgr = *mSourceMgr_obj;
+  auto mErr_obj = mSandbox->malloc_in_sandbox<decoder_error_mgr>();
+  auto& mErr = *mErr_obj;
 
   this->p_mInfo = mInfo_obj.to_opaque();
   this->p_mSourceMgr = mSourceMgr_obj.to_opaque();
-  this->mErr.pub.error_exit = nullptr;
-  this->mErr.pub.emit_message = nullptr;
-  this->mErr.pub.output_message = nullptr;
-  this->mErr.pub.format_message = nullptr;
-  this->mErr.pub.reset_error_mgr = nullptr;
-  this->mErr.pub.msg_code = 0;
-  this->mErr.pub.trace_level = 0;
-  this->mErr.pub.num_warnings = 0;
-  this->mErr.pub.jpeg_message_table = nullptr;
-  this->mErr.pub.last_jpeg_message = 0;
-  this->mErr.pub.addon_message_table = nullptr;
-  this->mErr.pub.first_addon_message = 0;
-  this->mErr.pub.last_addon_message = 0;
+  this->p_mErr = mErr_obj.to_opaque();
+  mErr.pub.error_exit = nullptr;
+  mErr.pub.emit_message = nullptr;
+  mErr.pub.output_message = nullptr;
+  mErr.pub.format_message = nullptr;
+  mErr.pub.reset_error_mgr = nullptr;
+  mErr.pub.msg_code = 0;
+  mErr.pub.trace_level = 0;
+  mErr.pub.num_warnings = 0;
+  mErr.pub.jpeg_message_table = nullptr;
+  mErr.pub.last_jpeg_message = 0;
+  mErr.pub.addon_message_table = nullptr;
+  mErr.pub.first_addon_message = 0;
+  mErr.pub.last_addon_message = 0;
   mState = JPEG_HEADER;
   mReading = true;
   mImageData = nullptr;
@@ -171,12 +177,14 @@ Maybe<Telemetry::HistogramID> nsJPEGDecoder::SpeedHistogram() const {
 nsresult nsJPEGDecoder::InitInternal() {
   auto& mInfo = *rlbox::from_opaque(p_mInfo);
   auto& mSourceMgr = *rlbox::from_opaque(p_mSourceMgr);
+  auto& mErr = *rlbox::from_opaque(p_mErr);
+
   // We set up the normal JPEG error routines, then override error_exit.
-  mInfo.err = sandbox_invoke(*mSandbox, jpeg_std_error, mSandbox->UNSAFE_accept_pointer(&mErr.pub));
+  mInfo.err = sandbox_invoke(*mSandbox, jpeg_std_error, &mErr.pub);
   //   mInfo.err = jpeg_std_error(&mErr.pub);
-  mErr.pub.error_exit = my_error_exit;
+  mErr.pub.error_exit = *m_my_error_exit_cb;
   // Establish the setjmp return context for my_error_exit to use.
-  if (setjmp(mErr.setjmp_buffer)) {
+  if (false) { //(setjmp(mErr.setjmp_buffer)) { // UNSAFE_fix
     // If we get here, the JPEG code has signaled an error, and initialization
     // has failed.
     return NS_ERROR_FAILURE;
@@ -242,8 +250,8 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
   nsresult error_code;
   // This cast to nsresult makes sense because setjmp() returns whatever we
   // passed to longjmp(), which was actually an nsresult.
-  if ((error_code = static_cast<nsresult>(setjmp(mErr.setjmp_buffer))) !=
-      NS_OK) {
+  if (false) { // ((error_code = static_cast<nsresult>(setjmp(mErr.setjmp_buffer))) != // UNSAFE_fix
+      // NS_OK) {
     if (error_code == NS_ERROR_FAILURE) {
       // Error due to corrupt data. Make sure that we don't feed any more data
       // to libjpeg-turbo.
@@ -679,8 +687,8 @@ WriteState nsJPEGDecoder::OutputScanlines() {
 
 // Override the standard error method in the IJG JPEG decoder code.
 METHODDEF(void)
-my_error_exit(j_common_ptr cinfo) {
-  decoder_error_mgr* err = (decoder_error_mgr*)cinfo->err;
+my_error_exit(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_common_ptr> cinfo) {
+  decoder_error_mgr* err = (decoder_error_mgr*)cinfo->err.UNSAFE_unverified();
 
   // Convert error to a browser error code
   nsresult error_code = err->pub.msg_code == JERR_OUT_OF_MEMORY
@@ -691,14 +699,14 @@ my_error_exit(j_common_ptr cinfo) {
   char buffer[JMSG_LENGTH_MAX];
 
   // Create the message
-  (*err->pub.format_message)(cinfo, buffer);
+  (*err->pub.format_message)(cinfo.UNSAFE_unverified(), buffer);
 
   fprintf(stderr, "JPEG decoding error:\n%s\n", buffer);
 #endif
 
   // Return control to the setjmp point.  We pass an nsresult masquerading as
   // an int, which works because the setjmp() caller casts it back.
-  longjmp(err->setjmp_buffer, static_cast<int>(error_code));
+  // longjmp(err->setjmp_buffer, static_cast<int>(error_code)); // UNSAFE_fix
 }
 
 /*******************************************************************************
@@ -843,7 +851,7 @@ fill_input_buffer(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> j
     // for it
     auto& mInfo = *rlbox::from_opaque(decoder->p_mInfo);
     if (new_backtrack_buflen > MAX_JPEG_MARKER_LENGTH) {
-      my_error_exit((j_common_ptr)(&mInfo).UNSAFE_unverified());
+      my_error_exit(*(decoder->mSandbox), rlbox::sandbox_reinterpret_cast<j_common_ptr>(&mInfo));
     }
 
     // Round up to multiple of 256 bytes.
@@ -852,7 +860,7 @@ fill_input_buffer(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> j
     // Check for OOM
     if (!buf) {
       mInfo.err->msg_code = (int) JERR_OUT_OF_MEMORY;
-      my_error_exit((j_common_ptr)(&mInfo).UNSAFE_unverified());
+      my_error_exit(*(decoder->mSandbox), rlbox::sandbox_reinterpret_cast<j_common_ptr>(&mInfo));
     }
     decoder->mBackBuffer = buf;
     decoder->mBackBufferSize = roundup_buflen;

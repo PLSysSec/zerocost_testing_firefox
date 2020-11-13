@@ -37,8 +37,7 @@
   f(int, last_addon_message, FIELD_NORMAL, ##__VA_ARGS__) g()
 
 #define sandbox_fields_reflection_jpeg_class_decoder_error_mgr(f, g, ...) \
-  f(struct jpeg_error_mgr, pub, FIELD_NORMAL, ##__VA_ARGS__) g() \
-  f(jmp_buf, setjmp_buffer, FIELD_NORMAL, ##__VA_ARGS__) g()
+  f(struct jpeg_error_mgr, pub, FIELD_NORMAL, ##__VA_ARGS__) g()
 
 #define sandbox_fields_reflection_jpeg_class_jpeg_common_struct(f, g, ...) \
   f(struct jpeg_error_mgr *, err, FIELD_NORMAL, ##__VA_ARGS__) g() \
