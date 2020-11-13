@@ -44,6 +44,11 @@ static void cmyk_convert_bgra(uint32_t* aInput, uint32_t* aOutput,
 
 using mozilla::gfx::SurfaceFormat;
 
+static inline constexpr char RLBOX_JPEG_STATE_ASSERTION[] =
+    "Tainted data is being inspected only to check the internal state of "
+    "libogg structures. This is not a condition that is critical for safety of "
+    "the renderer.";
+
 namespace mozilla {
 namespace image {
 
@@ -54,12 +59,12 @@ static mozilla::LazyLogModule sJPEGDecoderAccountingLog(
 
 static thread_local void* jpegRendererSaved = nullptr;
 
-static qcms_profile* GetICCProfile(struct jpeg_decompress_struct& info) {
+static qcms_profile* GetICCProfile(tainted_volatile_jpeg<jpeg_decompress_struct>& info) {
   JOCTET* profilebuf;
   uint32_t profileLength;
   qcms_profile* profile = nullptr;
 
-  if (read_icc_profile(&info, &profilebuf, &profileLength)) {
+  if (read_icc_profile((&info).UNSAFE_unverified(), &profilebuf, &profileLength)) {
     profile = qcms_profile_from_memory(profilebuf, profileLength);
     free(profilebuf);
   }
@@ -143,7 +148,7 @@ nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
   mBytesToSkip = 0;
   rlbox::memset(*mSandbox, &mInfo, 0, sizeof(tainted_jpeg<jpeg_decompress_struct>));
   rlbox::memset(*mSandbox, &mSourceMgr, 0, sizeof(tainted_jpeg<jpeg_source_mgr>));
-  mInfo.client_data = mSandbox->UNSAFE_accept_pointer((void*) this);
+  mInfo.client_data = nullptr;
 
   mSegment = nullptr;
   mSegmentLen = 0;
@@ -184,12 +189,13 @@ nsresult nsJPEGDecoder::InitInternal() {
   //   mInfo.err = jpeg_std_error(&mErr.pub);
   mErr.pub.error_exit = *m_my_error_exit_cb;
   // Establish the setjmp return context for my_error_exit to use.
-  if (false) { //(setjmp(mErr.setjmp_buffer)) { // UNSAFE_fix
+  if (setjmp(m_jmpBuff)) {
     // If we get here, the JPEG code has signaled an error, and initialization
     // has failed.
     return NS_ERROR_FAILURE;
   }
 
+  m_jmpBuffValid = true;
   // Step 1: allocate and initialize JPEG decompression object
   sandbox_invoke(*mSandbox, jpeg_CreateDecompress, &mInfo, JPEG_LIB_VERSION, sizeof(tainted_jpeg<jpeg_decompress_struct>));
   // Set the source manager
@@ -250,8 +256,8 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
   nsresult error_code;
   // This cast to nsresult makes sense because setjmp() returns whatever we
   // passed to longjmp(), which was actually an nsresult.
-  if (false) { // ((error_code = static_cast<nsresult>(setjmp(mErr.setjmp_buffer))) != // UNSAFE_fix
-      // NS_OK) {
+  if ((error_code = static_cast<nsresult>(setjmp(m_jmpBuff))) !=
+      NS_OK) {
     if (error_code == NS_ERROR_FAILURE) {
       // Error due to corrupt data. Make sure that we don't feed any more data
       // to libjpeg-turbo.
@@ -268,6 +274,8 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
     return Transition::TerminateFailure();
   }
 
+  m_jmpBuffValid = true;
+
   MOZ_LOG(sJPEGLog, LogLevel::Debug,
           ("[this=%p] nsJPEGDecoder::Write -- processing JPEG data\n", this));
 
@@ -279,7 +287,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
 
       auto status = sandbox_invoke(*mSandbox, jpeg_read_header, &mInfo, TRUE);
       // Step 3: read file parameters with jpeg_read_header()
-      if (status.UNSAFE_unverified() == JPEG_SUSPENDED) {
+      if (status.unverified_safe_because(RLBOX_JPEG_STATE_ASSERTION) == JPEG_SUSPENDED) {
         MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
                 ("} (JPEG_SUSPENDED)"));
         return Transition::ContinueUnbuffered(
@@ -335,7 +343,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
       }
 
       if (mCMSMode != eCMSMode_Off) {
-        if ((mInProfile = GetICCProfile(*((&mInfo).UNSAFE_unverified()))) != nullptr &&
+        if ((mInProfile = GetICCProfile(mInfo)) != nullptr &&
             GetCMSOutputProfile()) {
           uint32_t profileSpace = qcms_profile_get_color_space(mInProfile);
 
@@ -447,7 +455,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
       mInfo.do_block_smoothing = TRUE;
 
       // Step 5: Start decompressor
-      if (sandbox_invoke(*mSandbox, jpeg_start_decompress, &mInfo).UNSAFE_unverified() == FALSE) {
+      if (sandbox_invoke(*mSandbox, jpeg_start_decompress, &mInfo).unverified_safe_because(RLBOX_JPEG_STATE_ASSERTION) == FALSE) {
         MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
                 ("} (I/O suspension after jpeg_start_decompress())"));
         return Transition::ContinueUnbuffered(
@@ -509,7 +517,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
                 (status != JPEG_REACHED_EOI))
               scan--;
 
-            if (!sandbox_invoke(*mSandbox, jpeg_start_output, &mInfo, scan).UNSAFE_unverified()) {
+            if (!sandbox_invoke(*mSandbox, jpeg_start_output, &mInfo, scan).unverified_safe_because(RLBOX_JPEG_STATE_ASSERTION)) {
               MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
                       ("} (I/O suspension after jpeg_start_output() -"
                        " PROGRESSIVE)"));
@@ -535,10 +543,10 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
               return Transition::ContinueUnbuffered(
                   State::JPEG_DATA);  // I/O suspension
             case WriteState::FINISHED:
-              NS_ASSERTION((mInfo.output_scanline == mInfo.output_height).UNSAFE_unverified(),
+              NS_ASSERTION((mInfo.output_scanline == mInfo.output_height).unverified_safe_because(RLBOX_JPEG_STATE_ASSERTION),
                            "We didn't process all of the data!");
 
-              if (!sandbox_invoke(*mSandbox, jpeg_finish_output, &mInfo).UNSAFE_unverified()) {
+              if (!sandbox_invoke(*mSandbox, jpeg_finish_output, &mInfo).unverified_safe_because(RLBOX_JPEG_STATE_ASSERTION)) {
                 MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
                         ("} (I/O suspension after jpeg_finish_output() -"
                          " PROGRESSIVE)"));
@@ -572,7 +580,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
 
       // Step 7: Finish decompression
 
-      if (sandbox_invoke(*mSandbox, jpeg_finish_decompress, &mInfo).UNSAFE_unverified() == FALSE) {
+      if (sandbox_invoke(*mSandbox, jpeg_finish_decompress, &mInfo).unverified_safe_because(RLBOX_JPEG_STATE_ASSERTION) == FALSE) {
         MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
                 ("} (I/O suspension after jpeg_finish_decompress() - DONE)"));
         return Transition::ContinueUnbuffered(
@@ -688,25 +696,31 @@ WriteState nsJPEGDecoder::OutputScanlines() {
 // Override the standard error method in the IJG JPEG decoder code.
 METHODDEF(void)
 my_error_exit(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_common_ptr> cinfo) {
-  decoder_error_mgr* err = (decoder_error_mgr*)cinfo->err.UNSAFE_unverified();
+  nsJPEGDecoder* decoder = (nsJPEGDecoder*) jpegRendererSaved;
+  tainted_jpeg<decoder_error_mgr*> err = rlbox::sandbox_reinterpret_cast<decoder_error_mgr*>(cinfo->err);
 
   // Convert error to a browser error code
-  nsresult error_code = err->pub.msg_code == JERR_OUT_OF_MEMORY
+  nsresult error_code = err->pub.msg_code.unverified_safe_because("Only checking to set an error code") == JERR_OUT_OF_MEMORY
                             ? NS_ERROR_OUT_OF_MEMORY
                             : NS_ERROR_FAILURE;
 
 #ifdef DEBUG
-  char buffer[JMSG_LENGTH_MAX];
+  // char buffer[JMSG_LENGTH_MAX];
 
   // Create the message
-  (*err->pub.format_message)(cinfo.UNSAFE_unverified(), buffer);
+  //(*err->pub.format_message)(cinfo, buffer);
 
-  fprintf(stderr, "JPEG decoding error:\n%s\n", buffer);
+  fprintf(stderr, "JPEG decoding error");
 #endif
 
   // Return control to the setjmp point.  We pass an nsresult masquerading as
   // an int, which works because the setjmp() caller casts it back.
-  // longjmp(err->setjmp_buffer, static_cast<int>(error_code)); // UNSAFE_fix
+  if (!decoder->m_jmpBuffValid) {
+    abort();
+  } else {
+    decoder->m_jmpBuffValid = false;
+  }
+  longjmp(decoder->m_jmpBuff, static_cast<int>(error_code));
 }
 
 /*******************************************************************************
@@ -765,23 +779,23 @@ init_source(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd) {}
         A zero or negative skip count should be treated as a no-op.
 */
 METHODDEF(void)
-skip_input_data(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd, tainted_jpeg<long> t_num_bytes) {
-  struct jpeg_source_mgr* src = jd->src.UNSAFE_unverified();
-  auto num_bytes = t_num_bytes.UNSAFE_unverified();
-  nsJPEGDecoder* decoder = (nsJPEGDecoder*)(jd->client_data.UNSAFE_unverified());
+skip_input_data(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd, tainted_jpeg<long> num_bytes) {
+  tainted_jpeg<jpeg_source_mgr*> src = jd->src;
+  nsJPEGDecoder* decoder = (nsJPEGDecoder*) jpegRendererSaved;
 
-  if (num_bytes > (long)src->bytes_in_buffer) {
+  if ((num_bytes > rlbox::sandbox_static_cast<long>(src->bytes_in_buffer)).unverified_safe_because(
+    "Branches either set tainted data or mBytesToSkip which is checked")) {
     // Can't skip it all right now until we get more data from
     // network stream. Set things up so that fill_input_buffer
     // will skip remaining amount.
-    decoder->mBytesToSkip = (size_t)num_bytes - src->bytes_in_buffer;
+    decoder->mBytesToSkip = (rlbox::sandbox_static_cast<size_t>(num_bytes) - src->bytes_in_buffer).UNSAFE_unverified();
     src->next_input_byte += src->bytes_in_buffer;
     src->bytes_in_buffer = 0;
 
   } else {
     // Simple case. Just advance buffer pointer
 
-    src->bytes_in_buffer -= (size_t)num_bytes;
+    src->bytes_in_buffer -= rlbox::sandbox_static_cast<size_t>(num_bytes);
     src->next_input_byte += num_bytes;
   }
 }
@@ -801,7 +815,7 @@ skip_input_data(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd,
 METHODDEF(tainted_jpeg<boolean>)
 fill_input_buffer(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd) {
   tainted_jpeg<jpeg_source_mgr*> src = jd->src;
-  nsJPEGDecoder* decoder = (nsJPEGDecoder*)(jd->client_data.UNSAFE_unverified());
+  nsJPEGDecoder* decoder = (nsJPEGDecoder*) jpegRendererSaved;
 
   if (decoder->mReading) {
     const JOCTET* new_buffer = decoder->mSegment;
@@ -897,7 +911,7 @@ fill_input_buffer(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> j
  */
 METHODDEF(void)
 term_source(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd) {
-  nsJPEGDecoder* decoder = (nsJPEGDecoder*)(jd->client_data.UNSAFE_unverified());
+  nsJPEGDecoder* decoder = (nsJPEGDecoder*) jpegRendererSaved;
 
   // This function shouldn't be called if we ran into an error we didn't
   // recover from.

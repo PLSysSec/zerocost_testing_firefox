@@ -88,18 +88,19 @@ class nsJPEGDecoder : public Decoder {
 
   StreamingLexer<State> mLexer;
 
-public:
+ public:
   rlbox_sandbox_jpeg* mSandbox;
-private:
+ private:
+  void getRLBoxSandbox();
   sandbox_callback_jpeg<void(*)(jpeg_decompress_struct *)>* m_init_source_cb;
   sandbox_callback_jpeg<void(*)(j_decompress_ptr)>* m_term_source_cb;
   sandbox_callback_jpeg<void(*)(j_decompress_ptr, long)>* m_skip_input_data_cb;
   sandbox_callback_jpeg<boolean(*)(j_decompress_ptr)>* m_fill_input_buffer_cb;
   sandbox_callback_jpeg<void(*)(j_common_ptr)>* m_my_error_exit_cb;
-
-  void getRLBoxSandbox();
-
  public:
+  jmp_buf m_jmpBuff;
+  bool m_jmpBuffValid = false;
+
   tainted_opaque_jpeg<jpeg_decompress_struct*> p_mInfo;
   tainted_opaque_jpeg<jpeg_source_mgr*> p_mSourceMgr;
   tainted_opaque_jpeg<decoder_error_mgr*> p_mErr;
