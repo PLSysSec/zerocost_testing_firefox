@@ -156,6 +156,15 @@ nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
   mBackBuffer = nullptr;
   mBackBufferLen = mBackBufferSize = mBackBufferUnreadLen = 0;
 
+  m_input_transfer_buffer.set_zero();
+  m_input_transfer_buffer_size = 0;
+  m_output_transfer_buffer.set_zero();
+  m_output_transfer_buffer_size = 0;
+
+  auto p_output_transfer_buffer = mSandbox->malloc_in_sandbox<unsigned char*>();
+  m_p_output_transfer_buffer = p_output_transfer_buffer.to_opaque();
+  rlbox_sbx_allocations.push_back(rlbox::sandbox_reinterpret_cast<unsigned char*>(p_output_transfer_buffer).to_opaque());
+
   MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
           ("nsJPEGDecoder::nsJPEGDecoder: Creating JPEG decoder %p", this));
 }
@@ -226,6 +235,9 @@ nsresult nsJPEGDecoder::FinishInternal() {
   }
 
   jpegRendererSaved = nullptr;
+  for (auto sbx_ptr : rlbox_sbx_allocations) {
+    mSandbox->free_in_sandbox(sbx_ptr);
+  }
   return NS_OK;
 }
 
@@ -656,8 +668,19 @@ WriteState nsJPEGDecoder::OutputScanlines() {
   auto result = mPipe.WritePixelBlocks<uint32_t>(
       [&](uint32_t* aPixelBlock, int32_t aBlockSize) {
         JSAMPROW sampleRow = (JSAMPROW)(mCMSLine ? mCMSLine : aPixelBlock);
-        if (sandbox_invoke(*mSandbox, jpeg_read_scanlines, &mInfo, mSandbox->UNSAFE_accept_pointer(&sampleRow), 1).UNSAFE_unverified() != 1) {
+
+        bool used_copy = false;
+        auto row_size = mInfo.output_width.UNSAFE_unverified();
+        auto output_buffer = transfer_input_bytes(sampleRow, row_size, m_output_transfer_buffer, m_output_transfer_buffer_size, used_copy);
+        auto t_output_buffer = rlbox::from_opaque(output_buffer);
+        *rlbox::from_opaque(m_p_output_transfer_buffer) = t_output_buffer;
+
+        if (sandbox_invoke(*mSandbox, jpeg_read_scanlines, &mInfo, m_p_output_transfer_buffer, 1).UNSAFE_unverified() != 1) {
           return MakeTuple(/* aWritten */ 0, Some(WriteState::NEED_MORE_DATA));
+        }
+
+        if (used_copy) {
+          memcpy(sampleRow, t_output_buffer.UNSAFE_unverified(), row_size);
         }
 
         switch (mInfo.out_color_space.UNSAFE_unverified()) {
@@ -800,6 +823,39 @@ skip_input_data(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> jd,
   }
 }
 
+tainted_opaque_jpeg<unsigned char*> nsJPEGDecoder::transfer_input_bytes(
+  unsigned char* buffer, size_t size,
+  tainted_opaque_jpeg<unsigned char*>& transfer_buffer,
+  size_t& transfer_buffer_size,
+  bool& used_copy)
+{
+  if (transfer_buffer_size >= size) {
+    used_copy = true;
+    return transfer_buffer;
+  }
+
+  const bool free_src_on_copy = false;
+  auto transferred = rlbox::copy_memory_or_grant_access(*mSandbox, buffer, size, free_src_on_copy, used_copy);
+  if (used_copy) {
+    transfer_buffer = transferred.to_opaque();
+    transfer_buffer_size = size;
+    rlbox_sbx_allocations.push_back(transfer_buffer);
+    return transfer_buffer;
+  } else {
+    return transferred.to_opaque();
+  }
+}
+
+tainted_opaque_jpeg<unsigned char*> nsJPEGDecoder::transfer_input_bytes(
+  unsigned char* buffer, size_t size,
+  tainted_opaque_jpeg<unsigned char*>& transfer_buffer,
+  size_t& transfer_buffer_size)
+{
+
+  bool used_copy = false;
+  return transfer_input_bytes(buffer, size, transfer_buffer, transfer_buffer_size, used_copy);
+}
+
 /******************************************************************************/
 /* data source manager method
         This is called whenever bytes_in_buffer has reached zero and more
@@ -842,7 +898,9 @@ fill_input_buffer(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> j
 
     decoder->mBackBufferUnreadLen = src->bytes_in_buffer.UNSAFE_unverified();
 
-    src->next_input_byte = decoder->mSandbox->UNSAFE_accept_pointer(new_buffer);
+    auto transferred = decoder->transfer_input_bytes(const_cast<JOCTET *>(new_buffer), new_buflen,
+      decoder->m_input_transfer_buffer, decoder->m_input_transfer_buffer_size);
+    src->next_input_byte = rlbox::from_opaque(transferred);
     src->bytes_in_buffer = (size_t)new_buflen;
     decoder->mReading = false;
 
@@ -893,8 +951,10 @@ fill_input_buffer(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_decompress_ptr> j
   }
 
   // Point to start of data to be rescanned.
-  src->next_input_byte = decoder->mSandbox->UNSAFE_accept_pointer(
-    decoder->mBackBuffer + decoder->mBackBufferLen - decoder->mBackBufferUnreadLen);
+  auto target_ptr = decoder->mBackBuffer + decoder->mBackBufferLen - decoder->mBackBufferUnreadLen;
+  auto transferred = decoder->transfer_input_bytes(const_cast<JOCTET *>(target_ptr), decoder->mBackBufferUnreadLen,
+    decoder->m_input_transfer_buffer, decoder->m_input_transfer_buffer_size);
+  src->next_input_byte = rlbox::from_opaque(transferred);
   src->bytes_in_buffer += decoder->mBackBufferUnreadLen;
   decoder->mBackBufferLen = (size_t)new_backtrack_buflen;
   decoder->mReading = true;
