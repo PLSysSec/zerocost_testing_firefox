@@ -64,7 +64,7 @@ static qcms_profile* GetICCProfile(tainted_volatile_jpeg<jpeg_decompress_struct>
   uint32_t profileLength;
   qcms_profile* profile = nullptr;
 
-  if (read_icc_profile((&info).UNSAFE_unverified(), &profilebuf, &profileLength)) {
+  if (read_icc_profile((&info).to_opaque(), &profilebuf, &profileLength)) {
     profile = qcms_profile_from_memory(profilebuf, profileLength);
     free(profilebuf);
   }
@@ -637,24 +637,24 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::FinishedJPEGData() {
 }
 
 Orientation nsJPEGDecoder::ReadOrientationFromEXIF() {
-  jpeg_saved_marker_ptr marker;
+  tainted_jpeg<jpeg_saved_marker_ptr> marker;
   auto& mInfo = *rlbox::from_opaque(p_mInfo);
 
   // Locate the APP1 marker, where EXIF data is stored, in the marker list.
-  for (marker = mInfo.marker_list.UNSAFE_unverified(); marker != nullptr; marker = marker->next) {
-    if (marker->marker == JPEG_APP0 + 1) {
+  for (marker = mInfo.marker_list; marker != nullptr; marker = marker->next) {
+    if (marker->marker.UNSAFE_unverified() == JPEG_APP0 + 1) {
       break;
     }
   }
 
   // If we're at the end of the list, there's no EXIF data.
-  if (!marker) {
+  if (marker == nullptr) {
     return Orientation();
   }
 
   // Extract the orientation information.
-  EXIFData exif = EXIFParser::Parse(marker->data,
-                                    static_cast<uint32_t>(marker->data_length));
+  EXIFData exif = EXIFParser::Parse(marker->data.UNSAFE_unverified(),
+                                    static_cast<uint32_t>(marker->data_length.UNSAFE_unverified()));
   return exif.orientation;
 }
 

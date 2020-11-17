@@ -22,6 +22,7 @@ extern "C" {
 }
 
 #include <setjmp.h>
+#include <memory>
 
 namespace mozilla {
 namespace image {
