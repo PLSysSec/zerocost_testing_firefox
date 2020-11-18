@@ -324,6 +324,13 @@ private:
   }
 
 public:
+  /**
+   * @brief Unused member that allows the calling code to save data in a
+   * "per-sandbox" storage. This can be useful to save context which is used
+   * in callbacks.
+   */
+  void* sandbox_storage;
+
   /***** Function to adjust for custom machine models *****/
 
   template<typename T>
@@ -915,6 +922,9 @@ public:
       }
     }
     return ret;
+  }
+  inline void clear_transition_times() {
+    transition_times.clear();
   }
 #endif
 };
