@@ -686,7 +686,7 @@ WriteState nsJPEGDecoder::OutputScanlines() {
         JSAMPROW sampleRow = (JSAMPROW)(mCMSLine ? mCMSLine : aPixelBlock);
 
         bool used_copy = false;
-        auto row_size = mInfo.output_width.UNSAFE_unverified();
+        auto row_size = (mInfo.output_width * mInfo.output_components).UNSAFE_unverified();
         auto output_buffer = transfer_input_bytes(sampleRow, row_size, m_output_transfer_buffer, m_output_transfer_buffer_size, used_copy);
         auto t_output_buffer = rlbox::from_opaque(output_buffer);
         *rlbox::from_opaque(m_p_output_transfer_buffer) = t_output_buffer;
