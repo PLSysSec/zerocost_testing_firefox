@@ -1,5 +1,5 @@
 ac_add_options --enable-application=browser
 ac_add_options --enable-optimize --disable-debug
-ac_add_options --with-wasm-sandboxed-libraries=graphite,ogg,jpeg
+ac_add_options --with-wasm-sandboxed-libraries=zerocost,graphite,ogg,jpeg
 
 mk_add_options MOZ_OBJDIR=/mnt/sata/ffbuilds/firefox_latest_zerocost_release
