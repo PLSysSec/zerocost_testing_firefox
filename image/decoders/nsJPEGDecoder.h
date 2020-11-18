@@ -113,6 +113,7 @@ class nsJPEGDecoder : public Decoder {
 
   std::vector<std::unique_ptr<unsigned char*>> rlbox_app_allocations;
   std::vector<tainted_opaque_jpeg<unsigned char*>> rlbox_sbx_allocations;
+  uint32_t mSavedWidth;
  public:
   tainted_opaque_jpeg<unsigned char*> m_input_transfer_buffer;
   size_t m_input_transfer_buffer_size;

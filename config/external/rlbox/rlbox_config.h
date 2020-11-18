@@ -27,6 +27,8 @@ struct rlbox_shared_lock {
 
 #endif
 
+#define RLBOX_MEASURE_TRANSITION_TIMES
+
 // All uses are on the main thread right now, disable rlbox thread checks for
 // performance
 #define RLBOX_SINGLE_THREADED_INVOCATIONS

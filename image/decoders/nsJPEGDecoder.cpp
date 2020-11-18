@@ -8,6 +8,7 @@
 
 #include "nsJPEGDecoder.h"
 
+#include <atomic>
 #include <cstdint>
 #include <mutex>
 
@@ -53,6 +54,7 @@ static inline constexpr char RLBOX_JPEG_STATE_ASSERTION[] =
     "libogg structures. This is not a condition that is critical for safety of "
     "the renderer.";
 
+static std::atomic<unsigned int> g_rendered_jpeg_count = 1;
 namespace mozilla {
 namespace image {
 
@@ -172,6 +174,8 @@ nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
   mBackBuffer = nullptr;
   mBackBufferLen = mBackBufferSize = mBackBufferUnreadLen = 0;
 
+  mSavedWidth = 0;
+
   m_input_transfer_buffer.set_zero();
   m_input_transfer_buffer_size = 0;
   m_output_transfer_buffer.set_zero();
@@ -190,6 +194,13 @@ nsJPEGDecoder::~nsJPEGDecoder() {
   // Step 8: Release JPEG decompression object
   mInfo.src = nullptr;
   sandbox_invoke(*mSandbox, jpeg_destroy_decompress, &mInfo);
+
+  if (!IsMetadataDecode()) {
+    auto jpeg_count = g_rendered_jpeg_count++;
+    auto time_ns = mSandbox->get_total_ns_time_in_sandbox_and_transitions();
+    std::string tag = "JPEG_destroy(" + std::to_string(mSavedWidth) + "p)";
+    printf("Capture_Time:%s,%u,%ld|\n", tag.c_str(), jpeg_count, time_ns);
+  }
 
   free(mBackBuffer);
   mBackBuffer = nullptr;
@@ -323,6 +334,7 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
       }
 
       // Post our size to the superclass
+      mSavedWidth = mInfo.image_width.UNSAFE_unverified();
       PostSize(mInfo.image_width.UNSAFE_unverified(), mInfo.image_height.UNSAFE_unverified(),
                ReadOrientationFromEXIF());
       if (HasError()) {
@@ -335,6 +347,8 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
       if (IsMetadataDecode()) {
         return Transition::TerminateSuccess();
       }
+
+      mSandbox->clear_transition_times();
 
       // We're doing a full decode.
       switch (mInfo.jpeg_color_space.UNSAFE_unverified()) {
