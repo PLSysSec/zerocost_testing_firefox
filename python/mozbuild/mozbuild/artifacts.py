@@ -481,6 +481,7 @@ class MacArtifactJob(ArtifactJob):
         'libmozavcodec.dylib',
         'liboggwasm.dylib',
         'libosclientcerts.dylib',
+        'libjpegwasm.dylib',
         'libsoftokn3.dylib',
         'minidump-analyzer',
         'pingsender',

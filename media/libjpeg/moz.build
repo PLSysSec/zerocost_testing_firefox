@@ -16,8 +16,24 @@ EXPORTS += [
     'jpeglib.h',
 ]
 
-SOURCES += [
+jpeg_c_sources = [
+    'jcapimin.c',
+    'jcapistd.c',
+    'jccoefct.c',
+    'jccolor.c',
+    'jcdctmgr.c',
+    'jchuff.c',
+    'jcicc.c',
+    'jcinit.c',
+    'jcmainct.c',
+    'jcmarker.c',
+    'jcmaster.c',
     'jcomapi.c',
+    'jcparam.c',
+    'jcphuff.c',
+    'jcprepct.c',
+    'jcsample.c',
+    'jctrans.c',
     'jdapimin.c',
     'jdapistd.c',
     'jdatadst.c',
@@ -46,34 +62,13 @@ SOURCES += [
     'jidctred.c',
     'jmemmgr.c',
     'jmemnobs.c',
+    'jpeg_nbits_table.c',
     'jquant1.c',
     'jquant2.c',
     'jutils.c',
 ]
 
-# These files enable support for writing JPEGs
-SOURCES += [
-    'jcapimin.c',
-    'jcapistd.c',
-    'jccoefct.c',
-    'jccolor.c',
-    'jcdctmgr.c',
-    'jchuff.c',
-    'jcicc.c',
-    'jcinit.c',
-    'jcmainct.c',
-    'jcmarker.c',
-    'jcmaster.c',
-    'jcparam.c',
-    'jcphuff.c',
-    'jcprepct.c',
-    'jcsample.c',
-    'jctrans.c',
-]
-
-SOURCES += [
-    'jpeg_nbits_table.c',
-]
+SOURCES += jpeg_c_sources
 
 if CONFIG['LIBJPEG_TURBO_USE_YASM']:
     USE_YASM = True
@@ -206,6 +201,13 @@ elif CONFIG['CPU_ARCH'].startswith('ppc'):
         SOURCES[srcfile].flags += CONFIG['PPC_VMX_FLAGS']
 else: # No SIMD support?
     SOURCES += [
+        'jsimd_none.c',
+    ]
+
+if CONFIG['MOZ_WASM_SANDBOXING_JPEG']:
+    SANDBOXED_WASM_LIBRARY_NAME = 'jpegwasm'
+    WASM_SOURCES += jpeg_c_sources
+    WASM_SOURCES += [
         'jsimd_none.c',
     ]
 

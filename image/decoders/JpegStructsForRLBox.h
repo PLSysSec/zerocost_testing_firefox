@@ -4,8 +4,8 @@
 // version 2.0 (the "License"). You can obtain a copy of the License at
 // http://mozilla.org/MPL/2.0/.
 
-#ifndef GraphiteStructsForRLBox_h__
-#define GraphiteStructsForRLBox_h__
+#ifndef JPEGStructsForRLBox_h__
+#define JPEGStructsForRLBox_h__
 
 #if defined(__clang__)
 #  pragma clang diagnostic push

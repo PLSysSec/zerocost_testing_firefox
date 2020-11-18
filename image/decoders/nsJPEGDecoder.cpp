@@ -29,6 +29,10 @@
 
 #include "JpegRLBox.h"
 
+#ifdef MOZ_WASM_SANDBOXING_JPEG
+#  include "mozilla/ipc/LibrarySandboxPreload.h"
+#endif
+
 extern "C" {
 #include "iccjpeg.h"
 }
@@ -92,7 +96,19 @@ void nsJPEGDecoder::getRLBoxSandbox() {
   static sandbox_callback_jpeg<void(*)(j_common_ptr)> my_error_exit_cb;
 
   std::call_once(create_rlbox_flag, [&](){
+  #ifdef MOZ_WASM_SANDBOXING_OGG
+    // Firefox preloads the library externally to ensure we won't be stopped
+    // by the content sandbox
+    const bool external_loads_exist = true;
+    // See Bug 1606981: In some environments allowing stdio in the wasm sandbox
+    // fails as the I/O redirection involves querying meta-data of file
+    // descriptors. This querying fails in some environments.
+    const bool allow_stdio = false;
+    sandbox.create_sandbox(mozilla::ipc::GetSandboxedJpegPath().get(),
+                            external_loads_exist, allow_stdio);
+  #else
     sandbox.create_sandbox();
+  #endif
     init_source_cb = sandbox.register_callback(init_source);
     term_source_cb = sandbox.register_callback(term_source);
     skip_input_data_cb = sandbox.register_callback(skip_input_data);
@@ -146,8 +162,8 @@ nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
   mImageData = nullptr;
 
   mBytesToSkip = 0;
-  rlbox::memset(*mSandbox, &mInfo, 0, sizeof(tainted_jpeg<jpeg_decompress_struct>));
-  rlbox::memset(*mSandbox, &mSourceMgr, 0, sizeof(tainted_jpeg<jpeg_source_mgr>));
+  rlbox::memset(*mSandbox, &mInfo, 0, sizeof(mInfo));
+  rlbox::memset(*mSandbox, &mSourceMgr, 0, sizeof(mSourceMgr));
   mInfo.client_data = nullptr;
 
   mSegment = nullptr;
@@ -206,7 +222,7 @@ nsresult nsJPEGDecoder::InitInternal() {
 
   m_jmpBuffValid = true;
   // Step 1: allocate and initialize JPEG decompression object
-  sandbox_invoke(*mSandbox, jpeg_CreateDecompress, &mInfo, JPEG_LIB_VERSION, sizeof(tainted_jpeg<jpeg_decompress_struct>));
+  sandbox_invoke(*mSandbox, jpeg_CreateDecompress, &mInfo, JPEG_LIB_VERSION, sizeof(mInfo));
   // Set the source manager
   mInfo.src = &mSourceMgr;
 

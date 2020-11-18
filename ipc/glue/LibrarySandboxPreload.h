@@ -12,6 +12,7 @@ namespace mozilla {
 namespace ipc {
 nsAutoCString GetSandboxedGraphitePath();
 nsAutoCString GetSandboxedOggPath();
+nsAutoCString GetSandboxedJpegPath();
 void PreloadSandboxedDynamicLibraries();
 }  // namespace ipc
 }  // namespace mozilla
