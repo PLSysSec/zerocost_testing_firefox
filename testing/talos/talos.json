@@ -48,6 +48,9 @@
         "svgr": {
             "tests": ["tsvgx", "tsvgr_opacity", "tart", "tscrollx", "tsvg_static"]
         },
+        "zerocost": {
+            "tests": [ "jpeg_perf" ]
+        },
         "perf-reftest": {
             "tests": ["perf_reftest"]
         },

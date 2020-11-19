@@ -1,0 +1,81 @@
+#!/bin/bash
+
+# set -o xtrace
+
+FFBuildDir="/mnt/sata/ffbuilds/"
+FFVersionsDir=("./" "./")
+FFVersionsSuffix=("" "")
+FFVersions=("zerocost" "fullsave")
+
+if [ -z "$1" ]; then
+	echo "Expected argument $0 output_folder";
+	exit 1;
+fi
+
+if [[ -f "$1" ]]; then
+	echo "$1 already exists";
+	exit 1;
+fi
+
+OUTPUTPATH=$(cd "$(dirname "$1")"; pwd)/$(basename "$1")
+mkdir -p ${OUTPUTPATH}
+cd "$(dirname "$0")"
+
+if [ ${#FFVersionsDir[@]} -ne ${#FFVersions[@]} ]; then
+	echo "Versions Dir and Versions do not match";
+	exit 1;
+fi
+
+if [ ${#FFVersionsSuffix[@]} -ne ${#FFVersions[@]} ]; then
+	echo "Versions Suffix and Versions do not match";
+	exit 1;
+fi
+
+for (( i = 0; i < ${#FFVersions[@]}; i++ )); do
+	if [[ ! -d "$FFBuildDir/firefox_latest_${FFVersions[$i]}_release" ]]; then
+		echo "Not all firefox versions found: $FFBuildDir/firefox_latest_${FFVersions[$i]}_release";
+		exit 1;
+	fi
+done
+
+echo "Starting. Make sure to isolate cpus 1 then disable scaling with --- sudo cpufreq-set -c 1 --min 2200MHz --max 2200MHz"
+
+# param: outputDir/prefix
+# param: mozconfig
+function runTest(){
+	FINISHED=0
+	for (( l = 0; l < 3; l++ )); do
+		pkill -f WebContent
+		pkill -f firefox
+		rm -f ./testing/mozharness/build/local.json
+
+		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --suite "zerocost" 2>&1 | tee "$1_terminal_output.txt"
+		retVal=${PIPESTATUS[0]}
+		if [ $retVal -eq 0 ]; then
+			FINISHED=1
+			break;
+		else
+			echo "Failed to run test zerocost for $1. Retrying..." | tee "$1_terminal_output.txt"
+		fi
+	done
+	if [ $FINISHED -eq 0 ]; then
+		echo "Failed to run test zerocost for $1." | tee "$1_terminal_output.txt"
+		exit 1
+	fi
+	sleep 10
+	mv ./testing/mozharness/build/local.json "$1_rlbox_test_page_render.json"
+}
+
+SAVEDDIR=$PWD
+
+for (( j = 0; j < ${#FFVersions[@]}; j++ )); do
+    cd ${FFVersionsDir[$j]}
+    runTest "${OUTPUTPATH}/${FFVersions[$j]}${FFVersionsSuffix[$j]}" "mozconfig_${FFVersions[$j]}_release"
+    cd $SAVEDDIR
+done
+
+for (( j = 0; j < ${#FFVersions[@]}; j++ )); do 
+	./newAnalyzePerf.py "${OUTPUTPATH}/${FFVersions[$j]}${FFVersionsSuffix[$j]}_terminal_output.txt" 2>&1 >> "${OUTPUTPATH}/${FFVersions[$j]}${FFVersionsSuffix[$j]}_terminal_analysis.json"
+done
+
+./newAnalyzeMicroImagesPart2.py "${OUTPUTPATH}/"
