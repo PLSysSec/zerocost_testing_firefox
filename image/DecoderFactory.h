@@ -198,7 +198,8 @@ class DecoderFactory {
    */
   static already_AddRefed<Decoder> GetDecoder(DecoderType aType,
                                               RasterImage* aImage,
-                                              bool aIsRedecode);
+                                              bool aIsRedecode,
+                                              RasterImage* aImageExtra);
 };
 
 }  // namespace image

@@ -79,7 +79,7 @@ class nsJPEGDecoder : public Decoder {
   friend class DecoderFactory;
 
   // Decoders should only be instantiated via DecoderFactory.
-  nsJPEGDecoder(RasterImage* aImage, Decoder::DecodeStyle aDecodeStyle);
+  nsJPEGDecoder(RasterImage* aImage, Decoder::DecodeStyle aDecodeStyle, RasterImage* aImageExtra);
 
   enum class State { JPEG_DATA, FINISHED_JPEG_DATA };
 
@@ -113,7 +113,7 @@ class nsJPEGDecoder : public Decoder {
 
   std::vector<std::unique_ptr<unsigned char*>> rlbox_app_allocations;
   std::vector<tainted_opaque_jpeg<unsigned char*>> rlbox_sbx_allocations;
-  uint32_t mSavedWidth;
+  std::string mImageString;
  public:
   tainted_opaque_jpeg<unsigned char*> m_input_transfer_buffer;
   size_t m_input_transfer_buffer_size;

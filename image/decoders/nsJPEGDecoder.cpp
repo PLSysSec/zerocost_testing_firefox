@@ -125,8 +125,27 @@ void nsJPEGDecoder::getRLBoxSandbox() {
   m_my_error_exit_cb = &my_error_exit_cb;
 }
 
+inline std::string getImageURIString(RasterImage* aImage)
+{
+  nsIURI* imageURI = nullptr;
+
+  //Try to retrieve the image URI from the ImageDecoder request
+  if(aImage != nullptr) { 
+    imageURI = aImage->GetURI();
+  }
+
+  //if still null bail out - empty string causes the use of a temporary sandbox
+  if(imageURI == nullptr) { return ""; }
+
+  nsCString spec;
+  imageURI->GetSpec(spec);
+  std::string ret = spec.get();
+  return ret;
+}
+
 nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
-                             Decoder::DecodeStyle aDecodeStyle)
+                             Decoder::DecodeStyle aDecodeStyle,
+                             RasterImage* aImageExtra)
     : Decoder(aImage),
       mLexer(Transition::ToUnbuffered(State::FINISHED_JPEG_DATA,
                                       State::JPEG_DATA, SIZE_MAX),
@@ -135,6 +154,7 @@ nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
       mProfileLength(0),
       mCMSLine(nullptr),
       mDecodeStyle(aDecodeStyle) {
+  mImageString = getImageURIString(aImage != nullptr? aImage : aImageExtra);
   getRLBoxSandbox();
   auto mInfo_obj = mSandbox->malloc_in_sandbox<jpeg_decompress_struct>();
   auto& mInfo = *mInfo_obj;
@@ -174,8 +194,6 @@ nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
   mBackBuffer = nullptr;
   mBackBufferLen = mBackBufferSize = mBackBufferUnreadLen = 0;
 
-  mSavedWidth = 0;
-
   m_input_transfer_buffer.set_zero();
   m_input_transfer_buffer_size = 0;
   m_output_transfer_buffer.set_zero();
@@ -198,7 +216,7 @@ nsJPEGDecoder::~nsJPEGDecoder() {
   if (!IsMetadataDecode()) {
     auto jpeg_count = g_rendered_jpeg_count++;
     auto time_ns = mSandbox->get_total_ns_time_in_sandbox_and_transitions();
-    std::string tag = "JPEG_destroy(" + std::to_string(mSavedWidth) + "p)";
+    std::string tag = "JPEG_destroy(" + mImageString + ")";
     printf("Capture_Time:%s,%u,%ld|\n", tag.c_str(), jpeg_count, time_ns);
   }
 
@@ -334,7 +352,6 @@ LexerTransition<nsJPEGDecoder::State> nsJPEGDecoder::ReadJPEGData(
       }
 
       // Post our size to the superclass
-      mSavedWidth = mInfo.image_width.UNSAFE_unverified();
       PostSize(mInfo.image_width.UNSAFE_unverified(), mInfo.image_height.UNSAFE_unverified(),
                ReadOrientationFromEXIF());
       if (HasError()) {
