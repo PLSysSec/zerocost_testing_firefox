@@ -3,9 +3,9 @@
 # set -o xtrace
 
 FFBuildDir="/mnt/sata/ffbuilds/"
-FFVersionsDir=("./" "./")
-FFVersionsSuffix=("" "")
-FFVersions=("zerocost" "fullsave")
+FFVersionsDir=("./" "./" "./")
+FFVersionsSuffix=("" "" "")
+FFVersions=("zerocost" "fullsave" "regsave")
 
 if [ -z "$1" ]; then
 	echo "Expected argument $0 output_folder";

@@ -13,7 +13,7 @@ def getMedian(els, group):
             return float(el["Median"].replace(',', ''))
     sys.exit("Unreachable")
 
-def computeSummary(summaryFile, ext, parsed1, parsed2):
+def computeSummary(summaryFile, ext, parsed1, parsed2, parsed3):
     with open(summaryFile, "w") as f:
         writer = csv.writer(f)
         writer.writerow(["Image", "FullSave"])
@@ -22,7 +22,8 @@ def computeSummary(summaryFile, ext, parsed1, parsed2):
                 group_suffix = qual + "_" + res + "." + ext
                 zerocost_val = getMedian(parsed1, group_suffix)
                 fullsave_val = getMedian(parsed2, group_suffix)
-                writer.writerow([ label.replace("{0}", qual), fullsave_val/zerocost_val ])
+                regsave_val = getMedian(parsed3, group_suffix)
+                writer.writerow([ label.replace("{0}", qual), fullsave_val/zerocost_val, regsave_val/zerocost_val ])
 
 def read(folder, filename):
     inputFileName1 = os.path.join(folder, filename)
@@ -38,9 +39,11 @@ def main():
 
     input1 = read(inputFolderName, "zerocost_terminal_analysis.json")
     input2 = read(inputFolderName, "fullsave_terminal_analysis.json")
+    input3 = read(inputFolderName, "regsave_terminal_analysis.json")
 
     parsed1 = json.loads(input1)["data"]
     parsed2 = json.loads(input2)["data"]
+    parsed3 = json.loads(input3)["data"]
 
-    computeSummary(os.path.join(inputFolderName, "jpeg_perf.dat"), "jpeg", parsed1, parsed2)
+    computeSummary(os.path.join(inputFolderName, "jpeg_perf.dat"), "jpeg", parsed1, parsed2, parsed3)
 main()

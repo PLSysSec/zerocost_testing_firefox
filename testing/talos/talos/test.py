@@ -848,7 +848,7 @@ class jpeg_perf(PageloaderTest):
     tpmanifest = '${talos}/tests/jpeg_perf/tests.manifest'
     tpcycles = 1
     tploadnocache = True
-    tppagecycles = 4000
+    tppagecycles = 250
     tpmozafterpaint = True
     gecko_profile_interval = 1
     gecko_profile_entries = 10000000

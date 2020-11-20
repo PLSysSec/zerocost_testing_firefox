@@ -1,0 +1,5 @@
+ac_add_options --enable-application=browser
+
+mk_add_options MOZ_OBJDIR=/mnt/sata/ffbuilds/firefox_latest_stock_debug
+ac_add_options --enable-debug
+ac_add_options --disable-optimize
