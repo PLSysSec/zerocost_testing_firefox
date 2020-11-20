@@ -1750,7 +1750,7 @@ set_define('MOZ_HAS_REMOTE', has_remote)
 # ==============================================================
 
 def wasm_sandboxing_libraries():
-    return ('zerocost', 'fullsave', 'regsave', 'graphite', 'ogg', 'jpeg',)
+    return ('stock', 'zerocost', 'fullsave', 'regsave', 'graphite', 'ogg', 'jpeg',)
 
 option('--with-wasm-sandboxed-libraries',
        env='WASM_SANDBOXED_LIBRARIES',
