@@ -11,19 +11,22 @@ def getMedian(els, group):
     for el in els:
         if group in el["Group"]:
             return float(el["Median"].replace(',', ''))
-    sys.exit("Unreachable")
+    raise RuntimeError("Group not found")
 
 def computeSummary(summaryFile, ext, parsed1, parsed2, parsed3):
     with open(summaryFile, "w") as f:
         writer = csv.writer(f)
-        writer.writerow(["Image", "FullSave"])
+        writer.writerow(["Image", "FullSave", "RegSave"])
         for qual in ["best", "default", "none"]:
-            for res, label in {"1920" : "\\n1280p", "480" : "{0}\\n320p", "240" : "\\n135p"}.items():
-                group_suffix = qual + "_" + res + "." + ext
-                zerocost_val = getMedian(parsed1, group_suffix)
-                fullsave_val = getMedian(parsed2, group_suffix)
-                regsave_val = getMedian(parsed3, group_suffix)
-                writer.writerow([ label.replace("{0}", qual), fullsave_val/zerocost_val, regsave_val/zerocost_val ])
+            for res, label in {"1920" : "\\n1280p", "480" : "{0}\\n320p", "240" : "\\n135p", "10" : "\\n10w"}.items():
+                try:
+                    group_suffix = qual + "_" + res + "." + ext
+                    zerocost_val = getMedian(parsed1, group_suffix)
+                    fullsave_val = getMedian(parsed2, group_suffix)
+                    regsave_val = getMedian(parsed3, group_suffix)
+                    writer.writerow([ label.replace("{0}", qual), fullsave_val/zerocost_val, regsave_val/zerocost_val ])
+                except:
+                    pass
 
 def read(folder, filename):
     inputFileName1 = os.path.join(folder, filename)

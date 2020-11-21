@@ -49,7 +49,7 @@
             "tests": ["tsvgx", "tsvgr_opacity", "tart", "tscrollx", "tsvg_static"]
         },
         "zerocost": {
-            "tests": [ "jpeg_perf" ]
+            "tests": [ "jpeg_perf", "jpeg_width_perf"]
         },
         "perf-reftest": {
             "tests": ["perf_reftest"]

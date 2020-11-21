@@ -857,6 +857,22 @@ class jpeg_perf(PageloaderTest):
     timeout = 720000
 
 @register_test()
+class jpeg_width_perf(PageloaderTest):
+    """
+    Test the time taken to render jpeg images of increasing width
+    """
+    tpmanifest = '${talos}/tests/jpeg_perf/tests_width.manifest'
+    tpcycles = 1
+    tploadnocache = True
+    tppagecycles = 4000
+    tpmozafterpaint = True
+    gecko_profile_interval = 1
+    gecko_profile_entries = 10000000
+    filters = filter.ignore_first.prepare(5) + filter.median.prepare()
+    unit = 'ms'
+    timeout = 720000
+
+@register_test()
 class tscrollx(PageloaderTest):
     """
     This test does some scrolly thing.
