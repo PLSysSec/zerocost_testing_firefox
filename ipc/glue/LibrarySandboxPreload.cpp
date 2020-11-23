@@ -70,6 +70,7 @@ void PreloadSandboxedDynamicLibraries() {
   // enabled. Currently, this is only needed for Linux as Mac allows loading
   // libraries from the package file.
 #if defined(XP_LINUX)
+#ifndef MOZ_WASM_SANDBOXING_MPKFULLSAVE
 #  if defined(MOZ_WASM_SANDBOXING_GRAPHITE)
   if (!PreloadLibrary(GetSandboxedGraphitePath())) {
     MOZ_CRASH("Library preload failure: Failed to load libgraphite\n");
@@ -85,6 +86,7 @@ void PreloadSandboxedDynamicLibraries() {
     MOZ_CRASH("Library preload failure: Failed to load libjpeg\n");
   }
 #  endif
+#endif
 #endif
 }
 

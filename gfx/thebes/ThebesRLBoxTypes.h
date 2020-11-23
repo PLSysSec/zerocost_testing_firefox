@@ -9,10 +9,17 @@
 #include "mozilla/rlbox/rlbox_types.hpp"
 
 #ifdef MOZ_WASM_SANDBOXING_GRAPHITE
-namespace rlbox {
-class rlbox_lucet_sandbox;
-}
-using rlbox_gr_sandbox_type = rlbox::rlbox_lucet_sandbox;
+    #ifdef MOZ_WASM_SANDBOXING_MPKFULLSAVE
+        namespace rlbox {
+        class rlbox_mpk_sandbox;
+        }
+        using rlbox_gr_sandbox_type = rlbox::rlbox_mpk_sandbox;
+    #else
+        namespace rlbox {
+        class rlbox_lucet_sandbox;
+        }
+        using rlbox_gr_sandbox_type = rlbox::rlbox_lucet_sandbox;
+    #endif
 #else
 using rlbox_gr_sandbox_type = rlbox::rlbox_noop_sandbox;
 #endif

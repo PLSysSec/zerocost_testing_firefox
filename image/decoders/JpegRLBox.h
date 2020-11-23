@@ -12,7 +12,12 @@
 #include "mozilla/rlbox/rlbox_config.h"
 
 #ifdef MOZ_WASM_SANDBOXING_JPEG
-#  include "mozilla/rlbox/rlbox_lucet_sandbox.hpp"
+    #ifdef MOZ_WASM_SANDBOXING_MPKFULLSAVE
+        #  define RLBOX_USE_STATIC_CALLS() rlbox_mpk_sandbox_lookup_symbol
+        #  include "mozilla/rlbox/rlbox_mpk_sandbox.hpp"
+    #else
+        #  include "mozilla/rlbox/rlbox_lucet_sandbox.hpp"
+    #endif
 #else
 // Extra configuration for no-op sandbox
 #  define RLBOX_USE_STATIC_CALLS() rlbox_noop_sandbox_lookup_symbol

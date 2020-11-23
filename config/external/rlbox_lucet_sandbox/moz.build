@@ -22,13 +22,28 @@ elif CONFIG['MOZ_WASM_SANDBOXING_FULLSAVE'] or CONFIG['MOZ_WASM_SANDBOXING_REGSA
     ]
 
     EXPORTS += [
-        '/../zerocost_testing_sandbox/include/lucet_zero_trampoline.h'
+        '/../zerocost_testing_sandbox/include/ctx_save_trampoline.h'
     ]
 
     SOURCES += [
         '/../zerocost_testing_sandbox/c_src/trampoline_asm.S',
         '/../zerocost_testing_sandbox/c_src/trampoline_c.c',
         'rlbox_lucet_thread_locals.cpp'
+    ]
+elif CONFIG['MOZ_WASM_SANDBOXING_MPKFULLSAVE']:
+
+    EXPORTS.mozilla.rlbox += [
+        '/../rlbox_mpk_sandbox/include/rlbox_mpk_sandbox.hpp'
+    ]
+
+    EXPORTS += [
+        '/../rlbox_mpk_sandbox/include/ctx_save_trampoline.h'
+    ]
+
+    SOURCES += [
+        '/../rlbox_mpk_sandbox/c_src/trampoline_asm.S',
+        '/../rlbox_mpk_sandbox/c_src/trampoline_c.c',
+        'rlbox_mpk_thread_locals.cpp'
     ]
 else:
     error('Sandboxing transition type not set')
