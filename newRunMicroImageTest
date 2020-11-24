@@ -5,7 +5,7 @@
 FFBuildDir="/mnt/sata/ffbuilds/"
 FFVersionsDir=("./" "./" "./")
 FFVersionsSuffix=("" "" "")
-FFVersions=("zerocost" "fullsave" "regsave")
+FFVersions=("zerocost" "fullsave" "regsave" "mpkfullsave")
 
 if [ -z "$1" ]; then
 	echo "Expected argument $0 output_folder";
