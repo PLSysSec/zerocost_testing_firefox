@@ -2,6 +2,6 @@ ac_add_options --enable-application=browser
 
 ac_add_options --with-wasm-sandboxed-libraries=regsave,graphite,ogg,jpeg
 
-mk_add_options MOZ_OBJDIR=/mnt/sata/ffbuilds/firefox_latest_regsave_debug
+mk_add_options MOZ_OBJDIR=../ffbuilds/firefox_latest_regsave_debug
 ac_add_options --enable-debug
 ac_add_options --disable-optimize

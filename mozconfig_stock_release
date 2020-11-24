@@ -3,4 +3,4 @@ ac_add_options --enable-optimize --disable-debug
 
 ac_add_options --with-wasm-sandboxed-libraries=stock
 
-mk_add_options MOZ_OBJDIR=/mnt/sata/ffbuilds/firefox_latest_stock_release
+mk_add_options MOZ_OBJDIR=../ffbuilds/firefox_latest_stock_release
