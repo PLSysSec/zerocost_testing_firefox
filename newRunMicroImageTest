@@ -2,7 +2,7 @@
 
 # set -o xtrace
 
-FFBuildDir="/mnt/sata/ffbuilds/"
+FFBuildDir="../ffbuilds/"
 FFVersionsDir=("./" "./" "./" "./")
 FFVersionsSuffix=("" "" "" "")
 FFVersions=("zerocost" "fullsave" "regsave" "mpkfullsave")
