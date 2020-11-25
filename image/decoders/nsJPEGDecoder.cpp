@@ -219,9 +219,22 @@ nsJPEGDecoder::~nsJPEGDecoder() {
 
   if (!IsMetadataDecode()) {
     auto jpeg_count = g_rendered_jpeg_count++;
+
+    // auto num_fncalls = 0;
+    // auto num_callbacks = 0;
+    // auto& transition_times = mSandbox->process_and_get_transition_times();
+    // for (auto& transition_time : transition_times) {
+    //   if (transition_time.invoke == rlbox::rlbox_transition::INVOKE) {
+    //     num_fncalls++;
+    //   } else {
+    //     num_callbacks++;
+    //   }
+    // }
+
     auto time_ns = mSandbox->get_total_ns_time_in_sandbox_and_transitions();
     std::string tag = "JPEG_destroy(" + mImageString + ")";
     printf("Capture_Time:%s,%u,%ld|\n", tag.c_str(), jpeg_count, time_ns);
+    // printf("Fn calls: %d, Callbacks: %d\n", num_fncalls, num_callbacks);
   }
 
   free(mBackBuffer);
