@@ -74,7 +74,12 @@ if CONFIG['LIBJPEG_TURBO_USE_YASM']:
     USE_YASM = True
 
 if CONFIG['LIBJPEG_TURBO_ASFLAGS']:
-    if CONFIG['CPU_ARCH'] == 'arm':
+    if CONFIG['MOZ_WASM_SANDBOXING_MPKFULLSAVE']:
+        # No simd for this build to compare
+        SOURCES += [
+            'jsimd_none.c',
+        ]
+    elif CONFIG['CPU_ARCH'] == 'arm':
         SOURCES += [
             'simd/arm/jsimd.c',
             'simd/arm/jsimd_neon.S',
