@@ -75,9 +75,10 @@ for (( j = 0; j < ${#FFVersions[@]}; j++ )); do
     cd $SAVEDDIR
 done
 
-for (( j = 0; j < ${#FFVersions[@]}; j++ )); do 
+for (( j = 0; j < ${#FFVersions[@]}; j++ )); do
 	./newAnalyzePerf.py "${OUTPUTPATH}/${FFVersions[$j]}${FFVersionsSuffix[$j]}_terminal_output.txt" 2>&1 >> "${OUTPUTPATH}/${FFVersions[$j]}${FFVersionsSuffix[$j]}_terminal_analysis.json"
 done
 
 ./newAnalyzeMicroImagesPart2.py "${OUTPUTPATH}/"
+./newAnalyzeMicroImagesPart3.py "${OUTPUTPATH}/"
 ./newAnalyzeMicroImagesWasmMpk.py "${OUTPUTPATH}/"

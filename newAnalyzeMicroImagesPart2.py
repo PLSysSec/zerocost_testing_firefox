@@ -71,4 +71,5 @@ def main():
     parsed4 = json.loads(input4)["data"]
 
     computeSummary(os.path.join(inputFolderName, "jpeg_perf.dat"), "jpeg", parsed1, parsed2, parsed3, parsed4)
+
 main()
