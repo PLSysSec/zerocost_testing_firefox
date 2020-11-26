@@ -49,8 +49,8 @@ function runTest(){
 		pkill -f firefox
 		rm -f ./testing/mozharness/build/local.json
 
-		# MOZCONFIG=$2 taskset -c 1 ./mach talos-test --suite "zerocost" 2>&1 | tee "$1_terminal_output.txt"
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "jpeg_width_perf" 2>&1 | tee "$1_terminal_output.txt"
+		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --suite "zerocost" 2>&1 | tee "$1_terminal_output.txt"
+		# MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "jpeg_width_perf" 2>&1 | tee "$1_terminal_output.txt"
 		retVal=${PIPESTATUS[0]}
 		if [ $retVal -eq 0 ]; then
 			FINISHED=1

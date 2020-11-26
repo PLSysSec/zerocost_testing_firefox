@@ -16,17 +16,7 @@ def getMedian(els, group):
 gResLabel = {
     "1920" : "\\n1280p",
     "480" : "{0}\\n320p",
-    "240" : "\\n135p",
-    "width_10": "10",
-    "width_20": "20",
-    "width_30": "30",
-    "width_60": "60",
-    "width_120": "120",
-    "width_240": "240",
-    "width_480": "480",
-    "width_960": "960",
-    "width_1440": "1440",
-    "width_1920": "1920",
+    "240" : "\\n135p"
 }
 
 def computeSummary(summaryFile, ext, parsed1, parsed2, parsed3, parsed4):
