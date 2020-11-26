@@ -80,3 +80,4 @@ for (( j = 0; j < ${#FFVersions[@]}; j++ )); do
 done
 
 ./newAnalyzeMicroImagesPart2.py "${OUTPUTPATH}/"
+./newAnalyzeMicroImagesWasmMpk.py "${OUTPUTPATH}/"
