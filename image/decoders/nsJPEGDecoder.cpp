@@ -100,7 +100,7 @@ void nsJPEGDecoder::getRLBoxSandbox() {
   std::call_once(create_rlbox_flag, [&](){
   #ifdef MOZ_WASM_SANDBOXING_OGG
     #ifdef MOZ_WASM_SANDBOXING_MPKFULLSAVE
-      sandbox.create_sandbox();
+      sandbox.create_sandbox(mozilla::ipc::GetSandboxedJpegPath().get());
     #else
       // Firefox preloads the library externally to ensure we won't be stopped
       // by the content sandbox

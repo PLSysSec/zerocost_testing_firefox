@@ -13,7 +13,6 @@
 
 #ifdef MOZ_WASM_SANDBOXING_OGG
     #ifdef MOZ_WASM_SANDBOXING_MPKFULLSAVE
-        #  define RLBOX_USE_STATIC_CALLS() rlbox_mpk_sandbox_lookup_symbol
         #  include "mozilla/rlbox/rlbox_mpk_sandbox.hpp"
     #else
         #  include "mozilla/rlbox/rlbox_lucet_sandbox.hpp"

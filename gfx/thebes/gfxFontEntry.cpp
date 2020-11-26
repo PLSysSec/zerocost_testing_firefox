@@ -628,7 +628,7 @@ struct gfxFontEntry::GrSandboxData {
   GrSandboxData() {
 #ifdef MOZ_WASM_SANDBOXING_GRAPHITE
   #ifdef MOZ_WASM_SANDBOXING_MPKFULLSAVE
-    sandbox.create_sandbox();
+    sandbox.create_sandbox(mozilla::ipc::GetSandboxedGraphitePath().get());
   #else
     // Firefox preloads the library externally to ensure we won't be stopped by
     // the content sandbox
