@@ -24,7 +24,7 @@ def computeSummary(summaryFile, ext, parsed1, parsed2, parsed3, parsed4):
     with open(summaryFile, "w") as f:
         writer = csv.writer(f)
         writer.writerow(["Image", "FullSave", "Zerocost", "Transitions",
-            "MPKFullSave", "MPK(no transitions)", "Wasm overhead", "Required Wasm overhead for MPK perf"])
+            "MPKFullSave", "MPK(no transitions)", "Wasm overhead over mpk full save",  "Wasm overhead over native", "Required Wasm overhead for MPK perf"])
 
         groups = getGroups(parsed1)
         for group in groups:
@@ -35,7 +35,8 @@ def computeSummary(summaryFile, ext, parsed1, parsed2, parsed3, parsed4):
 
             transitions = fullsave_val - zerocost_val
             mpk_only = mpkfullsave_val - transitions
-            wasm_overhead = zerocost_val / mpkfullsave_val
+            wasm_mpkfull_overhead = zerocost_val / mpkfullsave_val
+            wasm_native_overhead = zerocost_val / mpk_only
             required_wasm_overhead = mpkfullsave_val / mpk_only
 
             writer.writerow([
@@ -45,7 +46,8 @@ def computeSummary(summaryFile, ext, parsed1, parsed2, parsed3, parsed4):
                 transitions,
                 mpkfullsave_val,
                 mpk_only,
-                wasm_overhead,
+                wasm_mpkfull_overhead,
+                wasm_native_overhead,
                 required_wasm_overhead
             ])
 
