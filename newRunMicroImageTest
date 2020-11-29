@@ -3,8 +3,8 @@
 # set -o xtrace
 
 FFBuildDir="../ffbuilds/"
-FFVersionsDir=("./" "./" "./" "./" "./" "./" "./")
-FFVersionsSuffix=("" "" "" "" "" "" "")
+FFVersionsDir=("./" "./" "./" "./" "./" "./")
+FFVersionsSuffix=("" "" "" "" "" "")
 FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "mpkfullsave", "lucet")
 
 if [ -z "$1" ]; then
