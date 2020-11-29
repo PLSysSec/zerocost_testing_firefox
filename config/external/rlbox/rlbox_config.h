@@ -43,4 +43,8 @@ struct rlbox_shared_lock {
 #define RLBOX_ZEROCOST_NOSWITCHSTACK
 #endif
 
+#ifdef MOZ_WASM_SANDBOXING_FULLSAVEWINDOWS
+#define RLBOX_ZEROCOST_WINDOWSMODE
+#endif
+
 #endif

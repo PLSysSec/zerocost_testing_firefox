@@ -23,7 +23,7 @@ elif CONFIG['MOZ_WASM_SANDBOXING_LUCET']:
     SOURCES += [
         'rlbox_lucet_thread_locals.cpp'
     ]
-elif CONFIG['MOZ_WASM_SANDBOXING_FULLSAVE'] or CONFIG['MOZ_WASM_SANDBOXING_REGSAVE']:
+elif CONFIG['MOZ_WASM_SANDBOXING_FULLSAVE'] or CONFIG['MOZ_WASM_SANDBOXING_REGSAVE'] or CONFIG['MOZ_WASM_SANDBOXING_FULLSAVEWINDOWS']:
 
     EXPORTS.mozilla.rlbox += [
         '/../zerocost_testing_sandbox/include/lucet_sandbox.h',

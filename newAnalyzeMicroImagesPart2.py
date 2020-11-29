@@ -19,7 +19,7 @@ gResLabel = {
     "240" : "\\n135p"
 }
 
-def computeSummary(summaryFile, ext, parsed1, parsed2, parsed3, parsed4, parsed5):
+def computeSummary(summaryFile, ext, parsed1, parsed2, parsed3, parsed4, parsed5, parsed6):
     with open(summaryFile, "w") as f:
         writer = csv.writer(f)
         writer.writerow(["Image", "FullSave", "RegSave", "MPKFullSave", "Lucet"])
@@ -32,12 +32,14 @@ def computeSummary(summaryFile, ext, parsed1, parsed2, parsed3, parsed4, parsed5
                     regsave_val = getMedian(parsed3, group_suffix)
                     mpkfullsave_val = getMedian(parsed4, group_suffix)
                     lucet_val = getMedian(parsed5, group_suffix)
+                    fullsavewindows_val = getMedian(parsed6, group_suffix)
 
                     writer.writerow([ label.replace("{0}", qual),
                         fullsave_val/zerocost_val,
                         regsave_val/zerocost_val,
                         mpkfullsave_val/zerocost_val,
-                        lucet_val/zerocost_val
+                        lucet_val/zerocost_val,
+                        fullsavewindows_val/zerocost_val
                     ])
                 except:
                     pass
@@ -59,13 +61,15 @@ def main():
     input3 = read(inputFolderName, "regsave_terminal_analysis.json")
     input4 = read(inputFolderName, "mpkfullsave_terminal_analysis.json")
     input5 = read(inputFolderName, "lucet_terminal_analysis.json")
+    input6 = read(inputFolderName, "fullsavewindows_terminal_analysis.json")
 
     parsed1 = json.loads(input1)["data"]
     parsed2 = json.loads(input2)["data"]
     parsed3 = json.loads(input3)["data"]
     parsed4 = json.loads(input4)["data"]
     parsed5 = json.loads(input5)["data"]
+    parsed6 = json.loads(input6)["data"]
 
-    computeSummary(os.path.join(inputFolderName, "jpeg_perf.dat"), "jpeg", parsed1, parsed2, parsed3, parsed4, parsed5)
+    computeSummary(os.path.join(inputFolderName, "jpeg_perf.dat"), "jpeg", parsed1, parsed2, parsed3, parsed4, parsed5, parsed6)
 
 main()
