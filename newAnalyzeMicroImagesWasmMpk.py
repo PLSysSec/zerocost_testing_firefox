@@ -20,7 +20,7 @@ def getGroups(els):
         ret = ret + [group_name]
     return ret
 
-def computeSummary(summaryFile, ext, parsed1, parsed2, parsed3, parsed4):
+def computeSummary(summaryFile, ext, parsed1, parsed2, parsed3, parsed4, parsed5):
     with open(summaryFile, "w") as f:
         writer = csv.writer(f)
         writer.writerow(["Image", "FullSave", "Zerocost", "Transitions",
@@ -32,6 +32,7 @@ def computeSummary(summaryFile, ext, parsed1, parsed2, parsed3, parsed4):
             fullsave_val = getMedian(parsed2, group)
             regsave_val = getMedian(parsed3, group)
             mpkfullsave_val = getMedian(parsed4, group)
+            lucet_val = getMedian(parsed5, group_suffix)
 
             transitions = fullsave_val - zerocost_val
             mpk_only = mpkfullsave_val - transitions
@@ -67,12 +68,14 @@ def main():
     input2 = read(inputFolderName, "fullsave_terminal_analysis.json")
     input3 = read(inputFolderName, "regsave_terminal_analysis.json")
     input4 = read(inputFolderName, "mpkfullsave_terminal_analysis.json")
+    input5 = read(inputFolderName, "lucet_terminal_analysis.json")
 
     parsed1 = json.loads(input1)["data"]
     parsed2 = json.loads(input2)["data"]
     parsed3 = json.loads(input3)["data"]
     parsed4 = json.loads(input4)["data"]
+    parsed5 = json.loads(input5)["data"]
 
-    computeSummary(os.path.join(inputFolderName, "wasm_mpk.dat"), "jpeg", parsed1, parsed2, parsed3, parsed4)
+    computeSummary(os.path.join(inputFolderName, "wasm_mpk.dat"), "jpeg", parsed1, parsed2, parsed3, parsed4, parsed5)
 
 main()
