@@ -5,7 +5,7 @@
 FFBuildDir="../ffbuilds/"
 FFVersionsDir=("./" "./" "./" "./" "./" "./")
 FFVersionsSuffix=("" "" "" "" "" "")
-FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "mpkfullsave", "lucet")
+FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "mpkfullsave" "lucet")
 
 if [ -z "$1" ]; then
 	echo "Expected argument $0 output_folder";
