@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 print("WASM_CC: " + str(sys.argv))
-filtered_args = [x for x in sys.argv if not ("sysroot" in x or "wasm_to_mpk_" in x)]
+filtered_args = [x for x in sys.argv if not ("sysroot" in x or "wasm_to_mpk" in x)]
 if "-Wl,--export-all" in filtered_args:
     filtered_args = [x.replace("-Wl,--export-all", "-shared") for x in filtered_args]
 else:

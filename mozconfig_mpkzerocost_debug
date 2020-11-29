@@ -1,0 +1,11 @@
+ac_add_options --enable-application=browser
+
+ac_add_options --with-wasm-sandboxed-libraries=mpkzerocost,graphite,ogg,jpeg
+
+mk_add_options MOZ_OBJDIR=../ffbuilds/firefox_latest_mpkzerocost_debug
+ac_add_options --enable-debug
+ac_add_options --disable-optimize
+
+export LUCETC="$topsrcdir/wasm_to_mpk_ld.py"
+export WASM_CC="$topsrcdir/wasm_to_mpkzerocost_cc.py"
+export WASM_CXX="$topsrcdir/wasm_to_mpkzerocost_cxx.py"

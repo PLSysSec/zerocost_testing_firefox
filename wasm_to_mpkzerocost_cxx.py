@@ -11,6 +11,13 @@ if "-Wl,--export-all" in filtered_args:
 else:
     filtered_args += [ "-fPIC"]
 
+filtered_args += [
+    "-fno-asm", "-fno-asm-blocks", # avoid bypasses
+    # need some form of shadow stack here. Safestack is not strong enough for mpk "-fsanitize=safe-stack"
+    "-flto", "-fsanitize=cfi-icall", "-fsanitize-cfi-icall-generalize-pointers", "-fno-sanitize-cfi-cross-dso", # forward edge protection
+    "-ftrivial-auto-var-init=zero", "-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang" # stack variable initialization
+]
+
 c = os.getenv("CXX")
 if c is None:
     c = "clang++"

@@ -12,7 +12,7 @@
 #include "mozilla/rlbox/rlbox_config.h"
 
 #ifdef MOZ_WASM_SANDBOXING_GRAPHITE
-    #ifdef MOZ_WASM_SANDBOXING_MPKFULLSAVE
+    #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST)
         #  include "mozilla/rlbox/rlbox_mpk_sandbox.hpp"
     #else
         #  include "mozilla/rlbox/rlbox_lucet_sandbox.hpp"
