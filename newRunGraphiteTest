@@ -49,7 +49,7 @@ function runTest(){
 		pkill -f firefox
 		rm -f ./testing/mozharness/build/local.json
 
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "jpeg_width_perf" 2>&1 | tee -a "$1_terminal_output.txt"
+		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test" 2>&1 | tee -a "$1_terminal_output.txt"
 		retVal=${PIPESTATUS[0]}
 		if [ $retVal -eq 0 ]; then
 			FINISHED=1
@@ -79,6 +79,3 @@ for (( j = 0; j < ${#FFVersions[@]}; j++ )); do
 	./newAnalyzePerf.py "${OUTPUTPATH}/${FFVersions[$j]}${FFVersionsSuffix[$j]}_terminal_output.txt" 2>&1 >> "${OUTPUTPATH}/${FFVersions[$j]}${FFVersionsSuffix[$j]}_terminal_analysis.json"
 done
 
-./newAnalyzeMicroImagesPart2.py "${OUTPUTPATH}/"
-./newAnalyzeMicroImagesPart3.py "${OUTPUTPATH}/"
-./newAnalyzeMicroImagesWasmMpk.py "${OUTPUTPATH}/"

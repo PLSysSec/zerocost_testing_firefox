@@ -257,6 +257,28 @@ bool gfxGraphiteShaper::ShapeText(DrawTarget* aDrawTarget,
   return NS_SUCCEEDED(rv);
 }
 
+#define SMALL_GLYPH_RUN \
+  256  // avoid heap allocation of per-glyph data arrays
+       // for short (typical) runs up to this length
+
+struct Cluster {
+  // in UTF16 code units, not Unicode character indices
+  tainted_gr<uint32_t> baseChar;
+  tainted_gr<uint32_t> baseGlyph;
+  tainted_gr<uint32_t> nChars;  // UTF16 code units
+  tainted_gr<uint32_t> nGlyphs;
+  Cluster() : baseChar(0), baseGlyph(0), nChars(0), nGlyphs(0) {}
+};
+
+template <class E, size_t N>
+class MOZ_NON_MEMMOVABLE AutoTArrayTaintedIndexer : public AutoTArray<E, N> {
+ public:
+  E& operator[](tainted_gr<uint32_t> i) {
+    return this->AutoTArray<E, N>::operator[](
+        i.unverified_safe_because("bounds checked arr"));
+  }
+};
+
 nsresult gfxGraphiteShaper::SetGlyphsFromSegment(
     gfxShapedText* aShapedText, uint32_t aOffset, uint32_t aLength,
     const char16_t* aText, tainted_opaque_gr<char16_t*> t_aText,
@@ -266,19 +288,119 @@ nsresult gfxGraphiteShaper::SetGlyphsFromSegment(
   int32_t dev2appUnits = aShapedText->GetAppUnitsPerDevUnit();
   bool rtl = aShapedText->IsRightToLeft();
 
+  uint32_t glyphCount =
+      sandbox_invoke(*mSandbox, gr_seg_n_slots, aSegment)
+          .unverified_safe_because(
+              "The only thing we are doing with this value is setting array "
+              "lengths below. 1) Graphite can return a very large value here, "
+              "which would cause Firefox to run out of memory. The below code "
+              "already handles this gracefully. 2) Graphite can later return "
+              "more glyphs than this value. However the the arrays below "
+              "bounds check any indexes accesses. Thus no checks required.");
   // identify clusters; graphite may have reordered/expanded/ligated glyphs.
-  tainted_gr<gr_glyph_to_char_association*> data =
-      sandbox_invoke(*mSandbox, gr_get_glyph_to_char_association, aSegment,
-                     aLength, rlbox::from_opaque(t_aText));
+  AutoTArrayTaintedIndexer<Cluster, SMALL_GLYPH_RUN> clusters;
+  AutoTArrayTaintedIndexer<tainted_gr<uint16_t>, SMALL_GLYPH_RUN> gids;
+  AutoTArrayTaintedIndexer<tainted_gr<float>, SMALL_GLYPH_RUN> xLocs;
+  AutoTArrayTaintedIndexer<tainted_gr<float>, SMALL_GLYPH_RUN> yLocs;
 
-  if (!data) {
-    return NS_ERROR_FAILURE;
+  if (!clusters.SetLength(aLength, fallible) ||
+      !gids.SetLength(glyphCount, fallible) ||
+      !xLocs.SetLength(glyphCount, fallible) ||
+      !yLocs.SetLength(glyphCount, fallible)) {
+    return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  tainted_gr<gr_glyph_to_char_cluster*> clusters = data->clusters;
-  tainted_gr<uint16_t*> gids = data->gids;
-  tainted_gr<float*> xLocs = data->xLocs;
-  tainted_gr<float*> yLocs = data->yLocs;
+  // We allow a lot of branching on tainted booleans below all for this reason
+  const char safe_compare[] =
+      "using this boolean to check to decide whether to either 1) index into a "
+      "bounds checked array 2) write to more tainted data 3) as a debugging "
+      "aid in debug assertions";
+
+  // walk through the glyph slots and check which original character
+  // each is associated with
+  tainted_gr<uint32_t> gIndex = 0;    // glyph slot index
+  tainted_gr<uint32_t> t_cIndex = 0;  // current cluster index
+  for (auto slot = sandbox_invoke(*mSandbox, gr_seg_first_slot, aSegment);
+       slot != nullptr;
+       slot = sandbox_invoke(*mSandbox, gr_slot_next_in_segment, slot),
+            gIndex++) {
+    auto slot_before = sandbox_invoke(*mSandbox, gr_slot_before, slot);
+    auto before_info =
+        sandbox_invoke(*mSandbox, gr_seg_cinfo, aSegment, slot_before);
+    auto t_before = rlbox::sandbox_static_cast<uint32_t>(
+        sandbox_invoke(*mSandbox, gr_cinfo_base, before_info));
+
+    auto slot_after = sandbox_invoke(*mSandbox, gr_slot_after, slot);
+    auto after_info =
+        sandbox_invoke(*mSandbox, gr_seg_cinfo, aSegment, slot_after);
+    auto t_after = rlbox::sandbox_static_cast<uint32_t>(
+        sandbox_invoke(*mSandbox, gr_cinfo_base, after_info));
+
+    gids[gIndex] = sandbox_invoke(*mSandbox, gr_slot_gid, slot);
+    xLocs[gIndex] = sandbox_invoke(*mSandbox, gr_slot_origin_X, slot);
+    yLocs[gIndex] = sandbox_invoke(*mSandbox, gr_slot_origin_Y, slot);
+
+    // if this glyph has a "before" character index that precedes the
+    // current cluster's char index, we need to merge preceding
+    // clusters until it gets included
+    {
+      while (true) {
+        auto no_before = t_before >= clusters[t_cIndex].baseChar;
+        auto first = t_cIndex == static_cast<uint32_t>(0);
+        if ((first || no_before).unverified_safe_because(safe_compare)) {
+          break;
+        }
+        clusters[t_cIndex - 1].nChars += clusters[t_cIndex].nChars;
+        clusters[t_cIndex - 1].nGlyphs += clusters[t_cIndex].nGlyphs;
+        --t_cIndex;
+      }
+    }
+
+    // if there's a gap between the current cluster's base character and
+    // this glyph's, extend the cluster to include the intervening chars
+    {
+      auto can_insert =
+          sandbox_invoke(*mSandbox, gr_slot_can_insert_before, slot);
+      auto has_chars = clusters[t_cIndex].nChars != static_cast<uint32_t>(0);
+      auto has_gap =
+          t_before >= (clusters[t_cIndex].baseChar + clusters[t_cIndex].nChars);
+      if ((can_insert && has_chars && has_gap)
+              .unverified_safe_because(safe_compare)) {
+        NS_ASSERTION(
+            (t_cIndex < aLength - 1).unverified_safe_because(safe_compare),
+            "t_cIndex at end of word");
+        Cluster& c = clusters[t_cIndex + 1];
+        c.baseChar = clusters[t_cIndex].baseChar + clusters[t_cIndex].nChars;
+        c.nChars = t_before - c.baseChar;
+        c.baseGlyph = gIndex;
+        c.nGlyphs = 0;
+        ++t_cIndex;
+      }
+    }
+
+    // increment cluster's glyph count to include current slot
+    NS_ASSERTION((t_cIndex < aLength).unverified_safe_because(safe_compare),
+                 "cIndex beyond word length");
+    clusters[t_cIndex].nGlyphs = clusters[t_cIndex].nGlyphs + 1;
+
+    // "after" used to index into pointer aText and so should be checked
+    bool failedAfterVerify = false;
+    uint32_t after = CopyAndVerifyOrFail(t_after, val < aLength, &failedAfterVerify);
+    if (failedAfterVerify) {
+      return NS_ERROR_ILLEGAL_VALUE;
+    }
+
+    // bump |after| index if it falls in the middle of a surrogate pair
+    if (NS_IS_HIGH_SURROGATE(aText[after]) && after < aLength - 1 &&
+        NS_IS_LOW_SURROGATE(aText[after + 1])) {
+      after++;
+    }
+    // extend cluster if necessary to reach the glyph's "after" index
+    if ((clusters[t_cIndex].baseChar + clusters[t_cIndex].nChars < after + 1)
+            .unverified_safe_because(safe_compare)) {
+      clusters[t_cIndex].nChars = after + 1 - clusters[t_cIndex].baseChar;
+    }
+  }
 
   CompressedGlyph* charGlyphs = aShapedText->GetCharacterGlyphs() + aOffset;
 
@@ -291,7 +413,7 @@ nsresult gfxGraphiteShaper::SetGlyphsFromSegment(
   // aLength below. As cIndex is not changing anymore, let's just verify it
   // and remove the tainted wrapper.
   uint32_t cIndex =
-      CopyAndVerifyOrFail(data->cIndex, val < aLength, &failedVerify);
+      CopyAndVerifyOrFail(t_cIndex, val < aLength, &failedVerify);
   if (failedVerify) {
     return NS_ERROR_ILLEGAL_VALUE;
   }
@@ -306,7 +428,7 @@ nsresult gfxGraphiteShaper::SetGlyphsFromSegment(
     // produces a tainted_volatile which means the value can change at any
     // moment allowing for possible time-of-check-time-of-use vuln. We thus
     // make a local copy to simplify the verification.
-    tainted_gr<gr_glyph_to_char_cluster> c = clusters[i];
+    const Cluster& c = clusters[i];
 
     tainted_gr<float> t_adv;  // total advance of the cluster
     if (rtl) {
@@ -444,7 +566,6 @@ nsresult gfxGraphiteShaper::SetGlyphsFromSegment(
     }
   }
 
-  sandbox_invoke(*mSandbox, gr_free_char_association, data);
   // std::cout << "!!!!!!!!!!!!!!SetGlyphsFromSegment\n";
   return NS_OK;
 }
