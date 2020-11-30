@@ -896,7 +896,7 @@ class graphite_perf_test(PageloaderTest):
     tpmanifest = '${talos}/tests/graphite_perf_test/tests.manifest'
     tpcycles = 1
     tploadnocache = True
-    tppagecycles = 15
+    tppagecycles = 50
     tpmozafterpaint = True
     gecko_profile_interval = 1
     gecko_profile_entries = 10000000
