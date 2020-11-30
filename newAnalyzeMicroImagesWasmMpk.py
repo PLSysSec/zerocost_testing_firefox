@@ -32,7 +32,7 @@ def computeSummary(summaryFile, ext, parsed1, parsed2, parsed3, parsed4, parsed5
             fullsave_val = getMedian(parsed2, group)
             regsave_val = getMedian(parsed3, group)
             mpkfullsave_val = getMedian(parsed4, group)
-            lucet_val = getMedian(parsed5, group_suffix)
+            lucet_val = getMedian(parsed5, group)
             fullsavewindows_val = getMedian(parsed6, group)
 
             transitions = fullsave_val - zerocost_val
