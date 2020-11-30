@@ -3,9 +3,9 @@
 # set -o xtrace
 
 FFBuildDir="../ffbuilds/"
-FFVersionsDir=("./" "./" "./" "./" "./" "./")
-FFVersionsSuffix=("" "" "" "" "" "")
-FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "mpkfullsave" "lucet")
+FFVersionsDir=("./" "./" "./" "./" "./")
+FFVersionsSuffix=("" "" "" "" "")
+FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet") # "mpkfullsave")
 
 if [ -z "$1" ]; then
 	echo "Expected argument $0 output_folder";
@@ -49,13 +49,14 @@ function runTest(){
 		pkill -f firefox
 		rm -f ./testing/mozharness/build/local.json
 
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test" 2>&1 | tee -a "$1_terminal_output.txt"
+		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test" 2>&1 | tee "$1_terminal_output.txt"
 		retVal=${PIPESTATUS[0]}
 		if [ $retVal -eq 0 ]; then
 			FINISHED=1
 			break;
 		else
 			echo "Failed to run test zerocost for $1. Retrying..." | tee -a "$1_terminal_output.txt"
+			mv "$1_terminal_output.txt" "$1_terminal_output.run_$l.txt"
 			sleep 30
 		fi
 	done
