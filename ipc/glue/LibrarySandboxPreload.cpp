@@ -80,7 +80,7 @@ void PreloadSandboxedDynamicLibraries() {
     MOZ_CRASH("Library preload failure: Failed to load libogg\n");
   }
 #  endif
-#  if defined(MOZ_WASM_SANDBOXING_OGG)
+#  if defined(MOZ_WASM_SANDBOXING_JPEG)
   if (!PreloadLibrary(GetSandboxedJpegPath())) {
     MOZ_CRASH("Library preload failure: Failed to load libjpeg\n");
   }
