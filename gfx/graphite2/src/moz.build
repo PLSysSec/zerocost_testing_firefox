@@ -67,7 +67,7 @@ if CONFIG['MOZ_WASM_SANDBOXING_GRAPHITE']:
 
 # tell graphite2 not to export symbols, we'll be linking it directly with
 # thebes
-DefineAndWasmDefine('GRAPHITE2_STATIC', True)
+DEFINES['GRAPHITE2_STATIC'] = True
 
 # We allow warnings for third-party code that can be updated from upstream.
 AllowCompilerWarnings()
