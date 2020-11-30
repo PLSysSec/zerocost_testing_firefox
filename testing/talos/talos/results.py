@@ -238,6 +238,8 @@ class PageloaderResults(Results):
         # gather the data
         self.results = []
         for line in lines:
+            if "Capture_Time" in line:
+                continue
             result = {}
             r = line.strip('|').split(';')
             r = [i for i in r if i]
