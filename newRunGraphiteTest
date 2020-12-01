@@ -3,9 +3,9 @@
 # set -o xtrace
 
 FFBuildDir="../ffbuilds/"
-FFVersionsDir=("./" "./" "./" "./" "./")
-FFVersionsSuffix=("" "" "" "" "")
-FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet") # "mpkfullsave")
+FFVersionsDir=("./" "./" "./" "./" "./" "./")
+FFVersionsSuffix=("" "" "" "" "" "")
+FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet" "mpkfullsave")
 
 if [ -z "$1" ]; then
 	echo "Expected argument $0 output_folder";
