@@ -20,17 +20,16 @@ def getGroups(els):
         ret = ret + [group_name]
     return ret
 
-def computeSummary(summaryFile, parsed1, parsed2, parsed3, parsed4, parsed5, parsed6):
+def computeSummary(summaryFile, parsed1, parsed2, parsed3, parsed5, parsed6):
     with open(summaryFile, "w") as f:
         writer = csv.writer(f)
-        writer.writerow(["Image", "Zerocost", "FullSave", "RegSave", "MPKFullSave", "Lucet", "FullSaveWindows"])
+        writer.writerow(["Image", "Zerocost", "FullSave", "RegSave", "Lucet", "FullSaveWindows"])
 
         groups = getGroups(parsed1)
         for group in groups:
             zerocost_val = getMedian(parsed1, group)
             fullsave_val = getMedian(parsed2, group)
             regsave_val = getMedian(parsed3, group)
-            mpkfullsave_val = getMedian(parsed4, group)
             lucet_val = getMedian(parsed5, group)
             fullsavewindows_val = getMedian(parsed6, group)
 
@@ -39,7 +38,6 @@ def computeSummary(summaryFile, parsed1, parsed2, parsed3, parsed4, parsed5, par
                 str(zerocost_val)        + " (" + str(zerocost_val        / zerocost_val) + ")",
                 str(fullsave_val)        + " (" + str(fullsave_val        / zerocost_val) + ")",
                 str(regsave_val)         + " (" + str(regsave_val         / zerocost_val) + ")",
-                str(mpkfullsave_val)     + " (" + str(mpkfullsave_val     / zerocost_val) + ")",
                 str(lucet_val)           + " (" + str(lucet_val           / zerocost_val) + ")",
                 str(fullsavewindows_val) + " (" + str(fullsavewindows_val / zerocost_val) + ")"
             ])
@@ -59,17 +57,15 @@ def main():
     input1 = read(inputFolderName, "zerocost_terminal_analysis.json")
     input2 = read(inputFolderName, "fullsave_terminal_analysis.json")
     input3 = read(inputFolderName, "regsave_terminal_analysis.json")
-    input4 = read(inputFolderName, "mpkfullsave_terminal_analysis.json")
     input5 = read(inputFolderName, "lucet_terminal_analysis.json")
     input6 = read(inputFolderName, "fullsavewindows_terminal_analysis.json")
 
     parsed1 = json.loads(input1)["data"]
     parsed2 = json.loads(input2)["data"]
     parsed3 = json.loads(input3)["data"]
-    parsed4 = json.loads(input4)["data"]
     parsed5 = json.loads(input5)["data"]
     parsed6 = json.loads(input6)["data"]
 
-    computeSummary(os.path.join(inputFolderName, "all_compare.dat"), parsed1, parsed2, parsed3, parsed4, parsed5, parsed6)
+    computeSummary(os.path.join(inputFolderName, "all_compare.dat"), parsed1, parsed2, parsed3, parsed5, parsed6)
 
 main()
