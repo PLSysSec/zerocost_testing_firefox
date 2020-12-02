@@ -217,6 +217,13 @@ nsJPEGDecoder::~nsJPEGDecoder() {
   mInfo.src = nullptr;
   sandbox_invoke(*mSandbox, jpeg_destroy_decompress, &mInfo);
 
+  mSandbox->free_in_sandbox(p_mInfo);
+  mSandbox->free_in_sandbox(p_mSourceMgr);
+  mSandbox->free_in_sandbox(p_mErr);
+  p_mInfo.set_zero();
+  p_mSourceMgr.set_zero();
+  p_mErr.set_zero();
+
   if (!IsMetadataDecode()) {
     auto jpeg_count = g_rendered_jpeg_count++;
 
