@@ -3,8 +3,8 @@
 # set -o xtrace
 
 FFBuildDir="../ffbuilds/"
-FFVersionsDir=("./" "./" "./" "./" "./" "./")
-FFVersionsSuffix=("" "" "" "" "" "")
+FFVersionsDir=("./" "./" "./" "./" "./")
+FFVersionsSuffix=("" "" "" "" "")
 FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet")
 
 if [ -z "$1" ]; then
@@ -83,4 +83,4 @@ done
 
 ./newAnalyzeMicroImagesPart2.py "${OUTPUTPATH}/"
 ./newAnalyzeMicroImagesPart3.py "${OUTPUTPATH}/"
-./newAnalyzeMicroImagesWasmMpk.py "${OUTPUTPATH}/"
+# ./newAnalyzeMicroImagesWasmMpk.py "${OUTPUTPATH}/"
