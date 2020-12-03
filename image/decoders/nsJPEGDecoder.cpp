@@ -205,7 +205,6 @@ nsJPEGDecoder::nsJPEGDecoder(RasterImage* aImage,
 
   auto p_output_transfer_buffer = mSandbox->malloc_in_sandbox<unsigned char*>();
   m_p_output_transfer_buffer = p_output_transfer_buffer.to_opaque();
-  rlbox_sbx_allocations.push_back(rlbox::sandbox_reinterpret_cast<unsigned char*>(p_output_transfer_buffer).to_opaque());
 
   MOZ_LOG(sJPEGDecoderAccountingLog, LogLevel::Debug,
           ("nsJPEGDecoder::nsJPEGDecoder: Creating JPEG decoder %p", this));
@@ -217,9 +216,20 @@ nsJPEGDecoder::~nsJPEGDecoder() {
   mInfo.src = nullptr;
   sandbox_invoke(*mSandbox, jpeg_destroy_decompress, &mInfo);
 
+  if (m_input_transfer_buffer_size != 0) {
+    mSandbox->free_in_sandbox(m_input_transfer_buffer);
+    m_input_transfer_buffer.set_zero();
+  }
+  if (m_output_transfer_buffer_size != 0) {
+    mSandbox->free_in_sandbox(m_output_transfer_buffer);
+    m_output_transfer_buffer.set_zero();
+  }
+
+  mSandbox->free_in_sandbox(m_p_output_transfer_buffer);
   mSandbox->free_in_sandbox(p_mInfo);
   mSandbox->free_in_sandbox(p_mSourceMgr);
   mSandbox->free_in_sandbox(p_mErr);
+  m_p_output_transfer_buffer.set_zero();
   p_mInfo.set_zero();
   p_mSourceMgr.set_zero();
   p_mErr.set_zero();
@@ -304,9 +314,6 @@ nsresult nsJPEGDecoder::FinishInternal() {
   }
 
   jpegRendererSaved = nullptr;
-  for (auto sbx_ptr : rlbox_sbx_allocations) {
-    mSandbox->free_in_sandbox(sbx_ptr);
-  }
   return NS_OK;
 }
 
@@ -903,14 +910,18 @@ tainted_opaque_jpeg<unsigned char*> nsJPEGDecoder::transfer_input_bytes(
   if (transfer_buffer_size >= size) {
     used_copy = true;
     return transfer_buffer;
+  } else if (transfer_buffer_size != 0) {
+    mSandbox->free_in_sandbox(transfer_buffer);
+    transfer_buffer_size = 0;
   }
 
   const bool free_src_on_copy = false;
   auto transferred = rlbox::copy_memory_or_grant_access(*mSandbox, buffer, size, free_src_on_copy, used_copy);
+  MOZ_RELEASE_ASSERT(transferred != nullptr);
+
   if (used_copy) {
     transfer_buffer = transferred.to_opaque();
     transfer_buffer_size = size;
-    rlbox_sbx_allocations.push_back(transfer_buffer);
     return transfer_buffer;
   } else {
     return transferred.to_opaque();
