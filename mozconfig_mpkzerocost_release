@@ -4,6 +4,6 @@ ac_add_options --with-wasm-sandboxed-libraries=mpkzerocost,graphite,ogg,jpeg
 
 mk_add_options MOZ_OBJDIR=../ffbuilds/firefox_latest_mpkzerocost_release
 
-export LUCETC="$topsrcdir/wasm_to_mpk_ld.py"
-export WASM_CC="$topsrcdir/wasm_to_mpkzerocost_cc.py"
-export WASM_CXX="$topsrcdir/wasm_to_mpkzerocost_cxx.py"
+export LUCETC="$topsrcdir/wasm_to_so_copy.py"
+export WASM_CC="$topsrcdir/wasm_to_zerocost_cc_64.py"
+export WASM_CXX="$topsrcdir/wasm_to_zerocost_cxx_64.py"

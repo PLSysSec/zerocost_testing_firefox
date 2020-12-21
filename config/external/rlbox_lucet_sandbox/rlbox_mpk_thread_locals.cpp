@@ -17,4 +17,18 @@
 // MingW bug is fixed.
 RLBOX_MPK_SANDBOX_STATIC_VARIABLES();
 
+#elif defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST)
+
+// Load general firefox configuration of RLBox
+#  include "mozilla/rlbox/rlbox_config.h"
+
+#  include "mozilla/rlbox/rlbox_segmentsfi_sandbox.hpp"
+
+#  include "mozilla/rlbox/rlbox.hpp"
+
+// The MingW compiler does not correctly handle static thread_local inline
+// members. We instead TLS storage via functions. This can be removed if the
+// MingW bug is fixed.
+RLBOX_SEGMENTSSFI_SANDBOX_STATIC_VARIABLES();
+
 #endif

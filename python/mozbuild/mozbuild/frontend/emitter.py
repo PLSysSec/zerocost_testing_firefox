@@ -1008,6 +1008,10 @@ class TreeMetadataEmitter(LoggingMixin):
                         mozpath.join(self.config.topsrcdir,
                                      ('third_party/rust/rlbox_lucet_sandbox/'
                                       'c_src/lucet_sandbox_wrapper.c')))
+                    srcs.append(
+                        mozpath.join(self.config.topsrcdir,
+                                     ('../rlbox_segmentsfizerocost_sandbox/'
+                                      'c_src/dlmalloc.c')))
                 sorted_files = sorted(srcs, key=canonical_suffix_for_file)
                 for canonical_suffix, files in itertools.groupby(
                         sorted_files, canonical_suffix_for_file):

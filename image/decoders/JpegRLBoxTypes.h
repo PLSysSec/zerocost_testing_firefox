@@ -14,6 +14,11 @@
         class rlbox_mpk_sandbox;
         }
         using rlbox_jpeg_sandbox_type = rlbox::rlbox_mpk_sandbox;
+    #elif defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST)
+        namespace rlbox {
+        class rlbox_segmentsfi_sandbox;
+        }
+        using rlbox_jpeg_sandbox_type = rlbox::rlbox_segmentsfi_sandbox;
     #else
         namespace rlbox {
         class rlbox_lucet_sandbox;

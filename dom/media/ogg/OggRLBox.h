@@ -14,6 +14,8 @@
 #ifdef MOZ_WASM_SANDBOXING_OGG
     #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST)
         #  include "mozilla/rlbox/rlbox_mpk_sandbox.hpp"
+    #elif defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST)
+        #  include "mozilla/rlbox/rlbox_segmentsfi_sandbox.hpp"
     #else
         #  include "mozilla/rlbox/rlbox_lucet_sandbox.hpp"
     #endif

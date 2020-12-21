@@ -1,0 +1,15 @@
+ac_add_options --enable-application=browser
+ac_add_options --target=i686-pc-linux
+
+ac_add_options --with-wasm-sandboxed-libraries=segmentsfizerocost,graphite,ogg,jpeg
+
+mk_add_options MOZ_OBJDIR=../ffbuilds/firefox_latest_segmentsfizerocost_debug
+ac_add_options --enable-debug
+ac_add_options --disable-optimize
+
+export CROSS_COMPILE=1
+export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig/
+
+export LUCETC="$topsrcdir/wasm_to_so_copy.py"
+export WASM_CC="$topsrcdir/wasm_to_zerocost_cc_32.py"
+export WASM_CXX="$topsrcdir/wasm_to_zerocost_cxx_32.py"

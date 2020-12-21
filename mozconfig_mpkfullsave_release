@@ -4,6 +4,6 @@ ac_add_options --with-wasm-sandboxed-libraries=mpkfullsave,graphite,ogg,jpeg
 
 mk_add_options MOZ_OBJDIR=../ffbuilds/firefox_latest_mpkfullsave_release
 
-export LUCETC="$topsrcdir/wasm_to_mpk_ld.py"
+export LUCETC="$topsrcdir/wasm_to_so_copy.py"
 export WASM_CC="$topsrcdir/wasm_to_mpk_cc.py"
 export WASM_CXX="$topsrcdir/wasm_to_mpk_cxx.py"

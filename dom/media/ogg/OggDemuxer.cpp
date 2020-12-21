@@ -85,7 +85,7 @@ OggDemuxer::nsAutoOggSyncState::~nsAutoOggSyncState() {
 rlbox_sandbox_ogg* OggDemuxer::CreateSandbox() {
   rlbox_sandbox_ogg* sandbox = new rlbox_sandbox_ogg();
 #ifdef MOZ_WASM_SANDBOXING_OGG
-  #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST)
+  #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST) || defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST)
     sandbox->create_sandbox(mozilla::ipc::GetSandboxedOggPath().get());
   #else
     // Firefox preloads the library externally to ensure we won't be stopped

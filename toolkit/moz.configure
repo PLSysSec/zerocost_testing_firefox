@@ -1750,7 +1750,7 @@ set_define('MOZ_HAS_REMOTE', has_remote)
 # ==============================================================
 
 def wasm_sandboxing_libraries():
-    return ('stock', 'lucet', 'zerocost', 'fullsave', 'regsave', 'fullsavewindows', 'mpkfullsave', 'mpkzerocost', 'graphite', 'ogg', 'jpeg',)
+    return ('stock', 'lucet', 'zerocost', 'fullsave', 'regsave', 'fullsavewindows', 'mpkfullsave', 'mpkzerocost', 'segmentsfizerocost', 'graphite', 'ogg', 'jpeg', 'png', )
 
 option('--with-wasm-sandboxed-libraries',
        env='WASM_SANDBOXED_LIBRARIES',
@@ -1900,10 +1900,10 @@ def wasm_sandboxing(libraries, target):
         return
 
     # Wasm sandboxing is only enabled on specific targets.
-    if not (target.cpu in ('x86_64',) and \
-            (target.kernel == 'Linux' and target.os != 'Android') or \
-            target.kernel == 'Darwin'):
-        die('wasm sandboxing is only enabled on x86-64 Linux and Mac')
+    #if not (target.cpu in ('x86_64',) and \
+    #        (target.kernel == 'Linux' and target.os != 'Android') or \
+    #        target.kernel == 'Darwin'):
+    #    die('wasm sandboxing is only enabled on x86-64 Linux and Mac')
 
     return namespace(**{name: True for name in libraries})
 
