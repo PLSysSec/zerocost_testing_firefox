@@ -33,7 +33,7 @@ elif CONFIG['MOZ_WASM_SANDBOXING_FULLSAVE'] or CONFIG['MOZ_WASM_SANDBOXING_REGSA
     ]
 
     EXPORTS += [
-        '/../zerocost_testing_sandbox/include/ctx_save_trampoline_mpk.h'
+        '/../zerocost_testing_sandbox/include/ctx_save_trampoline.h'
     ]
 
     SOURCES += [
