@@ -31,7 +31,7 @@ def compile(is_cpp, is_32_bit, args):
         cfi_lib = cfi_lib + "lib/linux/libclang_rt.cfi-x86_64.a"
 
     filtered_args += [
-        "-fno-asm", "-fno-asm-blocks", # avoid easy bypasses
+        "-fno-asm", "-fno-asm-blocks", "-Werror=return-type" # avoid easy bypasses
         "-fsanitize=safe-stack", "-fstack-clash-protection", # Safe stack
         "-flto", "-fuse-ld=lld", # Clang flags needed for cfi and maybe other passes
         "-fsanitize=cfi-icall", "-fsanitize-cfi-canonical-jump-tables", "-fsanitize-cfi-cross-dso", # forward edge protection

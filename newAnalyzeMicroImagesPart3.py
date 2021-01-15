@@ -20,7 +20,10 @@ def getGroups(els):
         ret = ret + [group_name]
     return ret
 
-def computeSummary(summaryFile, parsed1, parsed2, parsed3, parsed5, parsed6):
+def getOverhead(base, other):
+    return str(base/other)
+
+def computeSummary64(summaryFile, parsed1, parsed2, parsed3, parsed5, parsed6):
     with open(summaryFile, "w") as f:
         writer = csv.writer(f)
         writer.writerow(["Image", "Zerocost", "FullSave", "RegSave", "Lucet", "FullSaveWindows"])
@@ -35,11 +38,27 @@ def computeSummary(summaryFile, parsed1, parsed2, parsed3, parsed5, parsed6):
 
             writer.writerow([
                 group,
-                str(zerocost_val)        + " (" + str(zerocost_val        / zerocost_val) + ")",
-                str(fullsave_val)        + " (" + str(fullsave_val        / zerocost_val) + ")",
-                str(regsave_val)         + " (" + str(regsave_val         / zerocost_val) + ")",
-                str(lucet_val)           + " (" + str(lucet_val           / zerocost_val) + ")",
-                str(fullsavewindows_val) + " (" + str(fullsavewindows_val / zerocost_val) + ")"
+                str(zerocost_val)        + " (" + getOverhead(zerocost_val       , zerocost_val) + ")",
+                str(fullsave_val)        + " (" + getOverhead(fullsave_val       , zerocost_val) + ")",
+                str(regsave_val)         + " (" + getOverhead(regsave_val        , zerocost_val) + ")",
+                str(lucet_val)           + " (" + getOverhead(lucet_val          , zerocost_val) + ")",
+                str(fullsavewindows_val) + " (" + getOverhead(fullsavewindows_val, zerocost_val) + ")"
+            ])
+
+def computeSummary32(summaryFile, parsed1, parsed2):
+    with open(summaryFile, "w") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Image", "Stock", "SegmentSfi"])
+
+        groups = getGroups(parsed1)
+        for group in groups:
+            stock_val = getMedian(parsed1, group)
+            segmentsfi_val = getMedian(parsed2, group)
+
+            writer.writerow([
+                group,
+                str(stock_val)        + " (" + getOverhead(stock_val             , stock_val) + ")",
+                str(segmentsfi_val)   + " (" + getOverhead(segmentsfi_val        , stock_val) + ")"
             ])
 
 def read(folder, filename):
@@ -54,18 +73,15 @@ def main():
         exit(1)
     inputFolderName = sys.argv[1]
 
-    input1 = read(inputFolderName, "zerocost_terminal_analysis.json")
-    input2 = read(inputFolderName, "fullsave_terminal_analysis.json")
-    input3 = read(inputFolderName, "regsave_terminal_analysis.json")
-    input5 = read(inputFolderName, "lucet_terminal_analysis.json")
-    input6 = read(inputFolderName, "fullsavewindows_terminal_analysis.json")
+    parsed1 = json.loads(read(inputFolderName, "zerocost_terminal_analysis.json"))["data"]
+    parsed2 = json.loads(read(inputFolderName, "fullsave_terminal_analysis.json"))["data"]
+    parsed3 = json.loads(read(inputFolderName, "regsave_terminal_analysis.json"))["data"]
+    parsed5 = json.loads(read(inputFolderName, "lucet_terminal_analysis.json"))["data"]
+    parsed6 = json.loads(read(inputFolderName, "fullsavewindows_terminal_analysis.json"))["data"]
+    parsed7 = json.loads(read(inputFolderName, "stock32_terminal_analysis.json"))["data"]
+    parsed8 = json.loads(read(inputFolderName, "segmentsfi_terminal_analysis.json"))["data"]
 
-    parsed1 = json.loads(input1)["data"]
-    parsed2 = json.loads(input2)["data"]
-    parsed3 = json.loads(input3)["data"]
-    parsed5 = json.loads(input5)["data"]
-    parsed6 = json.loads(input6)["data"]
-
-    computeSummary(os.path.join(inputFolderName, "all_compare.dat"), parsed1, parsed2, parsed3, parsed5, parsed6)
+    computeSummary64(os.path.join(inputFolderName, "all_compare.dat"), parsed1, parsed2, parsed3, parsed5, parsed6)
+    computeSummary32(os.path.join(inputFolderName, "all_compare32.dat"), parsed7, parsed8)
 
 main()
