@@ -1,7 +1,7 @@
 ac_add_options --enable-application=browser
 ac_add_options --target=i686-pc-linux
 
-ac_add_options --with-wasm-sandboxed-libraries=stockindirect32
+ac_add_options --with-wasm-sandboxed-libraries=stockindirect32,graphite,ogg,jpeg
 
 . $topsrcdir/mozconfig_common
 mk_add_options MOZ_OBJDIR=$BROWSER_BUILD_PATH/firefox_latest_stockindirect32_debug
@@ -10,3 +10,7 @@ ac_add_options --disable-optimize
 
 export CROSS_COMPILE=1
 export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig/
+
+export LUCETC="$topsrcdir/wasm_to_so_copy.py"
+export WASM_CC="$topsrcdir/wasm_to_so_cc_32.py"
+export WASM_CXX="$topsrcdir/wasm_to_so_cxx_32.py"

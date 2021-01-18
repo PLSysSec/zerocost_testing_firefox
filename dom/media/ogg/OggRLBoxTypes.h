@@ -19,6 +19,8 @@
         class rlbox_segmentsfi_sandbox;
         }
         using rlbox_ogg_sandbox_type = rlbox::rlbox_segmentsfi_sandbox;
+    #elif defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
+        using rlbox_ogg_sandbox_type = rlbox::rlbox_dylib_sandbox;
     #else
         namespace rlbox {
         class rlbox_lucet_sandbox;
@@ -26,12 +28,7 @@
         using rlbox_ogg_sandbox_type = rlbox::rlbox_lucet_sandbox;
     #endif
 #else
-    #if defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
-        #  include "mozilla/rlbox/rlbox_noopindirect_sandbox.hpp"
-        using rlbox_ogg_sandbox_type = rlbox::rlbox_noopindirect_sandbox;
-    #else
-        using rlbox_ogg_sandbox_type = rlbox::rlbox_noop_sandbox;
-    #endif
+    using rlbox_ogg_sandbox_type = rlbox::rlbox_noop_sandbox;
 #endif
 
 using rlbox_sandbox_ogg = rlbox::rlbox_sandbox<rlbox_ogg_sandbox_type>;

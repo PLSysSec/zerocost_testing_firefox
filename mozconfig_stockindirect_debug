@@ -1,8 +1,12 @@
 ac_add_options --enable-application=browser
 
-ac_add_options --with-wasm-sandboxed-libraries=stockindirect
+ac_add_options --with-wasm-sandboxed-libraries=stockindirect,graphite,ogg,jpeg
 
 . $topsrcdir/mozconfig_common
 mk_add_options MOZ_OBJDIR=$BROWSER_BUILD_PATH/firefox_latest_stockindirect_debug
 ac_add_options --enable-debug
 ac_add_options --disable-optimize
+
+export LUCETC="$topsrcdir/wasm_to_so_copy.py"
+export WASM_CC="$topsrcdir/wasm_to_so_cc.py"
+export WASM_CXX="$topsrcdir/wasm_to_so_cxx.py"

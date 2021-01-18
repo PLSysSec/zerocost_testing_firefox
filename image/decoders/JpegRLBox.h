@@ -16,17 +16,15 @@
         #  include "mozilla/rlbox/rlbox_mpk_sandbox.hpp"
     #elif defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST)
         #  include "mozilla/rlbox/rlbox_segmentsfi_sandbox.hpp"
+    #elif defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
+        #  include "mozilla/rlbox/rlbox_dylib_sandbox.hpp"
     #else
         #  include "mozilla/rlbox/rlbox_lucet_sandbox.hpp"
     #endif
 #else
-    #if defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
-        #  include "mozilla/rlbox/rlbox_noopindirect_sandbox.hpp"
-    #else
-        // Extra configuration for no-op sandbox
-        #  define RLBOX_USE_STATIC_CALLS() rlbox_noop_sandbox_lookup_symbol
-        #  include "mozilla/rlbox/rlbox_noop_sandbox.hpp"
-    #endif
+    // Extra configuration for no-op sandbox
+    #  define RLBOX_USE_STATIC_CALLS() rlbox_noop_sandbox_lookup_symbol
+    #  include "mozilla/rlbox/rlbox_noop_sandbox.hpp"
 #endif
 
 #include "mozilla/rlbox/rlbox.hpp"
