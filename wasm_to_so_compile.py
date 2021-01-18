@@ -9,7 +9,7 @@ import pathlib
 
 def compile(is_cpp, is_32_bit, args):
     currdir = pathlib.Path(__file__).parent.absolute()
-    builds_path = os.path.join(currdir, "ffbuilds")
+    builds_path = os.path.join(currdir, "..", "ffbuilds")
     if not os.path.isdir(builds_path):
         builds_path = "/mnt/sata/ffbuilds/"
     compiler_path = os.path.join(builds_path, "zerocost_llvm_install")
