@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <dlfcn.h>
 #include <mutex>
 #ifndef RLBOX_USE_CUSTOM_SHARED_LOCK
 #  include <shared_mutex>
@@ -12,24 +13,24 @@
 
 namespace rlbox {
 
-class rlbox_noop_sandbox;
+class rlbox_noopindirect_sandbox;
 
-struct rlbox_noop_sandbox_thread_data
+struct rlbox_noopindirect_sandbox_thread_data
 {
-  rlbox_noop_sandbox* sandbox;
+  rlbox_noopindirect_sandbox* sandbox;
   uint32_t last_callback_invoked;
 };
 
 #ifdef RLBOX_EMBEDDER_PROVIDES_TLS_STATIC_VARIABLES
 
-rlbox_noop_sandbox_thread_data* get_rlbox_noop_sandbox_thread_data();
-#  define RLBOX_NOOP_SANDBOX_STATIC_VARIABLES()                                \
-    thread_local rlbox::rlbox_noop_sandbox_thread_data                         \
-      rlbox_noop_sandbox_thread_info{ 0, 0 };                                  \
+rlbox_noopindirect_sandbox_thread_data* get_rlbox_noopindirect_sandbox_thread_data();
+#  define RLBOX_NOOPINDIRECT_SANDBOX_STATIC_VARIABLES()                                \
+    thread_local rlbox::rlbox_noopindirect_sandbox_thread_data                         \
+      rlbox_noopindirect_sandbox_thread_info{ 0, 0 };                                  \
     namespace rlbox {                                                          \
-      rlbox_noop_sandbox_thread_data* get_rlbox_noop_sandbox_thread_data()     \
+      rlbox_noopindirect_sandbox_thread_data* get_rlbox_noopindirect_sandbox_thread_data()     \
       {                                                                        \
-        return &rlbox_noop_sandbox_thread_info;                                \
+        return &rlbox_noopindirect_sandbox_thread_info;                                \
       }                                                                        \
     }                                                                          \
     static_assert(true, "Enforce semi-colon")
@@ -41,7 +42,7 @@ rlbox_noop_sandbox_thread_data* get_rlbox_noop_sandbox_thread_data();
  * provide any isolation and only serves as a stepping stone towards migrating
  * an application to use the RLBox API.
  */
-class rlbox_noop_sandbox
+class rlbox_noopindirect_sandbox
 {
 public:
   // Stick with the system defaults
@@ -61,14 +62,14 @@ private:
   void* callbacks[MAX_CALLBACKS]{ 0 };
 
 #ifndef RLBOX_EMBEDDER_PROVIDES_TLS_STATIC_VARIABLES
-  thread_local static inline rlbox_noop_sandbox_thread_data thread_data{ 0, 0 };
+  thread_local static inline rlbox_noopindirect_sandbox_thread_data thread_data{ 0, 0 };
 #endif
 
   template<uint32_t N, typename T_Ret, typename... T_Args>
   static T_Ret callback_trampoline(T_Args... params)
   {
 #ifdef RLBOX_EMBEDDER_PROVIDES_TLS_STATIC_VARIABLES
-    auto& thread_data = *get_rlbox_noop_sandbox_thread_data();
+    auto& thread_data = *get_rlbox_noopindirect_sandbox_thread_data();
 #endif
     thread_data.last_callback_invoked = N;
     using T_Func = T_Ret (*)(T_Args...);
@@ -104,7 +105,7 @@ protected:
   static inline void* impl_get_unsandboxed_pointer_no_ctx(
     T_PointerType p,
     const void* /* example_unsandboxed_ptr */,
-    rlbox_noop_sandbox* (*/* expensive_sandbox_finder */)(
+    rlbox_noopindirect_sandbox* (*/* expensive_sandbox_finder */)(
       const void* example_unsandboxed_ptr))
   {
     return p;
@@ -114,7 +115,7 @@ protected:
   static inline T_PointerType impl_get_sandboxed_pointer_no_ctx(
     const void* p,
     const void* /* example_unsandboxed_ptr */,
-    rlbox_noop_sandbox* (*/* expensive_sandbox_finder */)(
+    rlbox_noopindirect_sandbox* (*/* expensive_sandbox_finder */)(
       const void* example_unsandboxed_ptr))
   {
     return const_cast<T_PointerType>(p);
@@ -146,38 +147,25 @@ protected:
 
   inline void* impl_get_memory_location()
   {
-    // There isn't any sandbox memory for the noop_sandbox as we just redirect
+    // There isn't any sandbox memory for the noopindirect_sandbox as we just redirect
     // to the app. Also, this is mostly used for pointer swizzling or sandbox
     // bounds checks which is also not present/not required. So we can just
     // return null
     return nullptr;
   }
 
-  // adding a template so that we can use static_assert to fire only if this
-  // function is invoked
-  template<typename T = void>
-  void* impl_lookup_symbol(const char* /* func_name */)
+  void* impl_lookup_symbol(const char* func_name)
   {
-    // Will fire if this impl_lookup_symbol is ever called for the static
-    // sandbox
-    constexpr bool fail = std::is_same_v<T, void>;
-    rlbox_detail_static_fail_because(
-      fail,
-      "The no_op_sandbox uses static calls and thus developers should add\n\n"
-      "#define RLBOX_USE_STATIC_CALLS() rlbox_noop_sandbox_lookup_symbol\n\n"
-      "to their code, to ensure that static calls are handled correctly.");
-
-    return nullptr;
+    auto ret = dlsym(nullptr, func_name);
+    detail::dynamic_check(ret != nullptr, "Symbol not found");
+    return ret;
   }
-
-#define rlbox_noop_sandbox_lookup_symbol(func_name)                            \
-  reinterpret_cast<void*>(&func_name) /* NOLINT */
 
   template<typename T, typename T_Converted, typename... T_Args>
   auto impl_invoke_with_func_ptr(T_Converted* func_ptr, T_Args&&... params)
   {
 #ifdef RLBOX_EMBEDDER_PROVIDES_TLS_STATIC_VARIABLES
-    auto& thread_data = *get_rlbox_noop_sandbox_thread_data();
+    auto& thread_data = *get_rlbox_noopindirect_sandbox_thread_data();
 #endif
     thread_data.sandbox = this;
     return (*func_ptr)(params...);
@@ -204,11 +192,11 @@ protected:
     return reinterpret_cast<T_PointerType>(chosen_trampoline);
   }
 
-  static inline std::pair<rlbox_noop_sandbox*, void*>
+  static inline std::pair<rlbox_noopindirect_sandbox*, void*>
   impl_get_executed_callback_sandbox_and_key()
   {
 #ifdef RLBOX_EMBEDDER_PROVIDES_TLS_STATIC_VARIABLES
-    auto& thread_data = *get_rlbox_noop_sandbox_thread_data();
+    auto& thread_data = *get_rlbox_noopindirect_sandbox_thread_data();
 #endif
     auto sandbox = thread_data.sandbox;
     auto callback_num = thread_data.last_callback_invoked;

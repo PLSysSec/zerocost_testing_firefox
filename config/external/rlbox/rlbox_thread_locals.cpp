@@ -6,12 +6,18 @@
 // Load general firefox configuration of RLBox
 #include "mozilla/rlbox/rlbox_config.h"
 
-#define RLBOX_USE_STATIC_CALLS() rlbox_noop_sandbox_lookup_symbol
-#include "mozilla/rlbox/rlbox_noop_sandbox.hpp"
+#if defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
+    #include "mozilla/rlbox/rlbox_noopindirect_sandbox.hpp"
+    #include "mozilla/rlbox/rlbox.hpp"
+    RLBOX_NOOPINDIRECT_SANDBOX_STATIC_VARIABLES();
+#else
+    #define RLBOX_USE_STATIC_CALLS() rlbox_noop_sandbox_lookup_symbol
+    #include "mozilla/rlbox/rlbox_noop_sandbox.hpp"
 
-#include "mozilla/rlbox/rlbox.hpp"
+    #include "mozilla/rlbox/rlbox.hpp"
 
-// The MingW compiler does not correctly handle static thread_local inline
-// members. We instead TLS storage via functions. This can be removed if the
-// MingW bug is fixed.
-RLBOX_NOOP_SANDBOX_STATIC_VARIABLES();
+    // The MingW compiler does not correctly handle static thread_local inline
+    // members. We instead TLS storage via functions. This can be removed if the
+    // MingW bug is fixed.
+    RLBOX_NOOP_SANDBOX_STATIC_VARIABLES();
+#endif

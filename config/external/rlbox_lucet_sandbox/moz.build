@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-if CONFIG['MOZ_WASM_SANDBOXING_STOCK'] or CONFIG['MOZ_WASM_SANDBOXING_ZEROCOST']:
+if CONFIG['MOZ_WASM_SANDBOXING_ZEROCOST']:
     EXPORTS.mozilla.rlbox += [
         '/third_party/rust/rlbox_lucet_sandbox/include/lucet_sandbox.h',
         '/third_party/rust/rlbox_lucet_sandbox/include/rlbox_lucet_sandbox.hpp',
@@ -14,7 +14,7 @@ if CONFIG['MOZ_WASM_SANDBOXING_STOCK'] or CONFIG['MOZ_WASM_SANDBOXING_ZEROCOST']
         'rlbox_lucet_thread_locals.cpp'
     ]
 
-elif CONFIG['MOZ_WASM_SANDBOXING_STOCK32']:
+elif CONFIG['MOZ_WASM_SANDBOXING_STOCK'] or CONFIG['MOZ_WASM_SANDBOXING_STOCK32'] or CONFIG['MOZ_WASM_SANDBOXING_STOCKINDIRECT'] or CONFIG['MOZ_WASM_SANDBOXING_STOCKINDIRECT32']:
     pass
 elif CONFIG['MOZ_WASM_SANDBOXING_LUCET']:
     EXPORTS.mozilla.rlbox += [

@@ -26,7 +26,11 @@
         using rlbox_gr_sandbox_type = rlbox::rlbox_lucet_sandbox;
     #endif
 #else
-using rlbox_gr_sandbox_type = rlbox::rlbox_noop_sandbox;
+    #if defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
+        using rlbox_gr_sandbox_type = rlbox::rlbox_noopindirect_sandbox;
+    #else
+        using rlbox_gr_sandbox_type = rlbox::rlbox_noop_sandbox;
+    #endif
 #endif
 
 using rlbox_sandbox_gr = rlbox::rlbox_sandbox<rlbox_gr_sandbox_type>;

@@ -20,9 +20,13 @@
         #  include "mozilla/rlbox/rlbox_lucet_sandbox.hpp"
     #endif
 #else
-// Extra configuration for no-op sandbox
-#  define RLBOX_USE_STATIC_CALLS() rlbox_noop_sandbox_lookup_symbol
-#  include "mozilla/rlbox/rlbox_noop_sandbox.hpp"
+    #if defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
+        #  include "mozilla/rlbox/rlbox_noopindirect_sandbox.hpp"
+    #else
+        // Extra configuration for no-op sandbox
+        #  define RLBOX_USE_STATIC_CALLS() rlbox_noop_sandbox_lookup_symbol
+        #  include "mozilla/rlbox/rlbox_noop_sandbox.hpp"
+    #endif
 #endif
 
 #include "mozilla/rlbox/rlbox.hpp"

@@ -6,6 +6,8 @@
 MY_TEMP_DIR=`mktemp -d -t rlbox_update.XXXXXX` || exit 1
 
 git clone https://github.com/PLSysSec/rlbox_sandboxing_api ${MY_TEMP_DIR}/rlbox
+git -C ${MY_TEMP_DIR}/rlbox fetch
+git -C ${MY_TEMP_DIR}/rlbox checkout gettimeofday
 
 COMMIT=$(git -C ${MY_TEMP_DIR}/rlbox rev-parse HEAD)
 perl -p -i -e "s/\[commit [0-9a-f]{40}\]/[commit ${COMMIT}]/" README-mozilla;

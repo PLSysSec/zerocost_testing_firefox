@@ -26,7 +26,12 @@
         using rlbox_ogg_sandbox_type = rlbox::rlbox_lucet_sandbox;
     #endif
 #else
-using rlbox_ogg_sandbox_type = rlbox::rlbox_noop_sandbox;
+    #if defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
+        #  include "mozilla/rlbox/rlbox_noopindirect_sandbox.hpp"
+        using rlbox_ogg_sandbox_type = rlbox::rlbox_noopindirect_sandbox;
+    #else
+        using rlbox_ogg_sandbox_type = rlbox::rlbox_noop_sandbox;
+    #endif
 #endif
 
 using rlbox_sandbox_ogg = rlbox::rlbox_sandbox<rlbox_ogg_sandbox_type>;
