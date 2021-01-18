@@ -2,10 +2,9 @@
 
 # set -o xtrace
 
+# FFBuildDir="/mnt/sata/ffbuilds/"
 FFBuildDir="../ffbuilds/"
-FFVersionsDir=("./" "./" "./" "./" "./")
-FFVersionsSuffix=("" "" "" "" "")
-FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet")
+FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet", "stock", "segmentsfizerocost", "stock32")
 
 if [ -z "$1" ]; then
 	echo "Expected argument $0 output_folder";
@@ -20,16 +19,6 @@ fi
 OUTPUTPATH=$(cd "$(dirname "$1")"; pwd)/$(basename "$1")
 mkdir -p ${OUTPUTPATH}
 cd "$(dirname "$0")"
-
-if [ ${#FFVersionsDir[@]} -ne ${#FFVersions[@]} ]; then
-	echo "Versions Dir and Versions do not match";
-	exit 1;
-fi
-
-if [ ${#FFVersionsSuffix[@]} -ne ${#FFVersions[@]} ]; then
-	echo "Versions Suffix and Versions do not match";
-	exit 1;
-fi
 
 for (( i = 0; i < ${#FFVersions[@]}; i++ )); do
 	if [[ ! -d "$FFBuildDir/firefox_latest_${FFVersions[$i]}_release" ]]; then
@@ -73,15 +62,14 @@ function runTest(){
 SAVEDDIR=$PWD
 
 for (( j = 0; j < ${#FFVersions[@]}; j++ )); do
-    cd ${FFVersionsDir[$j]}
-    runTest "${OUTPUTPATH}/${FFVersions[$j]}${FFVersionsSuffix[$j]}" "mozconfig_${FFVersions[$j]}_release"
+    runTest "${OUTPUTPATH}/${FFVersions[$j]}" "mozconfig_${FFVersions[$j]}_release"
     cd $SAVEDDIR
 done
 
 for (( j = 0; j < ${#FFVersions[@]}; j++ )); do
-	./newAnalyzePerf.py "${OUTPUTPATH}/${FFVersions[$j]}${FFVersionsSuffix[$j]}_terminal_output.txt" 2>&1 >> "${OUTPUTPATH}/${FFVersions[$j]}${FFVersionsSuffix[$j]}_terminal_analysis.json"
+	./newAnalyzePerf.py "${OUTPUTPATH}/${FFVersions[$j]}_terminal_output.txt" 2>&1 >> "${OUTPUTPATH}/${FFVersions[$j]}_terminal_analysis.json"
 done
 
-./newAnalyzeMicroImagesPart2.py "${OUTPUTPATH}/"
+# ./newAnalyzeMicroImagesPart2.py "${OUTPUTPATH}/"
 ./newAnalyzeMicroImagesPart3.py "${OUTPUTPATH}/"
 # ./newAnalyzeMicroImagesWasmMpk.py "${OUTPUTPATH}/"
