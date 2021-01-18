@@ -3,13 +3,17 @@
 import os
 import subprocess
 import sys
+import pathlib
 
 def compile(is_cpp, is_32_bit, args):
-    builds_path = "/mnt/sata/ffbuilds/"
-    compiler_path = builds_path + "zerocost_llvm_install/"
-    compiler_lib_path = compiler_path + "lib/clang/12.0.0/"
+    currdir = pathlib.Path(__file__).parent.absolute()
+    builds_path = os.path.join(currdir, "ffbuilds")
+    if not os.path.isdir(builds_path):
+        builds_path = "/mnt/sata/ffbuilds/"
+    compiler_path = os.path.join(builds_path, "zerocost_llvm_install")
+    compiler_lib_path = os.path.join(compiler_path, "lib/clang/12.0.0/")
 
-    compiler = compiler_path + "bin/clang"
+    compiler = os.path.join(compiler_path, "bin/clang")
     if is_cpp:
         compiler = compiler + "++"
 
@@ -26,14 +30,14 @@ def compile(is_cpp, is_32_bit, args):
 
     cfi_lib = compiler_lib_path
     if is_32_bit:
-        cfi_lib = cfi_lib + "lib/linux/libclang_rt.cfi-i386.a"
+        cfi_lib = os.path.join(cfi_lib, "lib/linux/libclang_rt.cfi-i386.a")
     else:
-        cfi_lib = cfi_lib + "lib/linux/libclang_rt.cfi-x86_64.a"
+        cfi_lib = os.path.join(cfi_lib, "lib/linux/libclang_rt.cfi-x86_64.a")
 
     filtered_args += [
-        "-fno-asm", "-fno-asm-blocks", "-Werror=return-type" # avoid easy bypasses
+        "-fno-asm", "-fno-asm-blocks", "-Werror=return-type", # avoid easy bypasses
         "-fsanitize=safe-stack", "-fstack-clash-protection", # Safe stack
-        "-flto", "-fuse-ld=lld", # Clang flags needed for cfi and maybe other passes
+        "-flto", "-fuse-ld=gold", # Clang flags needed for cfi and maybe other passes
         "-fsanitize=cfi-icall", "-fsanitize-cfi-canonical-jump-tables", "-fsanitize-cfi-cross-dso", # forward edge protection
         cfi_lib, # clang cfi runtime library
         "-ftrivial-auto-var-init=zero", "-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang" # stack variable initialization
