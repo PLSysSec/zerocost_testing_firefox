@@ -48,6 +48,7 @@
 #include "ThebesRLBox.h"
 
 #include <algorithm>
+#include <mutex>
 
 using namespace mozilla;
 using namespace mozilla::gfx;
@@ -615,45 +616,60 @@ hb_face_t* gfxFontEntry::GetHBFace() {
   return hb_face_reference(mHBFace);
 }
 
+static std::once_flag create_rlbox_flag;
+static rlbox_sandbox_gr graphiteSandbox;
+static sandbox_callback_gr<const void* (*)(const void*, unsigned int, size_t*)>
+    g_grGetTableCallback;
+static sandbox_callback_gr<void (*)(const void*, const void*)>
+    g_grReleaseTableCallback;
+// Text Shapers register a callback to get glyph advances
+static sandbox_callback_gr<float (*)(const void*, uint16_t)>
+    g_grGetGlyphAdvanceCallback;
 struct gfxFontEntry::GrSandboxData {
-  rlbox_sandbox_gr sandbox;
-  sandbox_callback_gr<const void* (*)(const void*, unsigned int, size_t*)>
-      grGetTableCallback;
-  sandbox_callback_gr<void (*)(const void*, const void*)>
-      grReleaseTableCallback;
+  rlbox_sandbox_gr& sandbox;
+  sandbox_callback_gr<const void* (*)(const void*, unsigned int, size_t*)>*
+      p_grGetTableCallback;
+  sandbox_callback_gr<void (*)(const void*, const void*)>*
+      p_grReleaseTableCallback;
   // Text Shapers register a callback to get glyph advances
-  sandbox_callback_gr<float (*)(const void*, uint16_t)>
-      grGetGlyphAdvanceCallback;
+  sandbox_callback_gr<float (*)(const void*, uint16_t)>*
+      p_grGetGlyphAdvanceCallback;
 
-  GrSandboxData() {
-#ifdef MOZ_WASM_SANDBOXING_GRAPHITE
-  #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST) || defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
-    sandbox.create_sandbox(mozilla::ipc::GetSandboxedGraphitePath().get());
-  #else
-    // Firefox preloads the library externally to ensure we won't be stopped by
-    // the content sandbox
-    const bool external_loads_exist = true;
-    // See Bug 1606981: In some environments allowing stdio in the wasm sandbox
-    // fails as the I/O redirection involves querying meta-data of file
-    // descriptors. This querying fails in some environments.
-    const bool allow_stdio = false;
-    sandbox.create_sandbox(mozilla::ipc::GetSandboxedGraphitePath().get(),
-                           external_loads_exist, allow_stdio);
-  #endif
-#else
-    sandbox.create_sandbox();
-#endif
-    grGetTableCallback = sandbox.register_callback(GrGetTable);
-    grReleaseTableCallback = sandbox.register_callback(GrReleaseTable);
-    grGetGlyphAdvanceCallback =
-        sandbox.register_callback(gfxGraphiteShaper::GrGetAdvance);
+  GrSandboxData() : sandbox(graphiteSandbox),
+    p_grGetTableCallback(&g_grGetTableCallback),
+    p_grReleaseTableCallback(&g_grReleaseTableCallback),
+    p_grGetGlyphAdvanceCallback(&g_grGetGlyphAdvanceCallback)
+   {
+    std::call_once(create_rlbox_flag, [&](){
+      #ifdef MOZ_WASM_SANDBOXING_GRAPHITE
+        #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST) || defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
+          sandbox.create_sandbox(mozilla::ipc::GetSandboxedGraphitePath().get());
+        #else
+          // Firefox preloads the library externally to ensure we won't be stopped by
+          // the content sandbox
+          const bool external_loads_exist = true;
+          // See Bug 1606981: In some environments allowing stdio in the wasm sandbox
+          // fails as the I/O redirection involves querying meta-data of file
+          // descriptors. This querying fails in some environments.
+          const bool allow_stdio = false;
+          sandbox.create_sandbox(mozilla::ipc::GetSandboxedGraphitePath().get(),
+                                external_loads_exist, allow_stdio);
+        #endif
+      #else
+          sandbox.create_sandbox();
+      #endif
+      printf("Creating sandbox\n");
+      g_grGetTableCallback = sandbox.register_callback(GrGetTable);
+      g_grReleaseTableCallback = sandbox.register_callback(GrReleaseTable);
+      g_grGetGlyphAdvanceCallback = sandbox.register_callback(gfxGraphiteShaper::GrGetAdvance);
+    });
   }
 
   ~GrSandboxData() {
-    grGetTableCallback.unregister();
-    grReleaseTableCallback.unregister();
-    grGetGlyphAdvanceCallback.unregister();
-    sandbox.destroy_sandbox();
+    // grGetTableCallback.unregister();
+    // grReleaseTableCallback.unregister();
+    // grGetGlyphAdvanceCallback.unregister();
+    // sandbox.destroy_sandbox();
   }
 };
 
@@ -711,7 +727,7 @@ rlbox_sandbox_gr* gfxFontEntry::GetGrSandbox() {
 sandbox_callback_gr<float (*)(const void*, uint16_t)>*
 gfxFontEntry::GetGrSandboxAdvanceCallbackHandle() {
   MOZ_ASSERT(mSandboxData != nullptr);
-  return &mSandboxData->grGetGlyphAdvanceCallback;
+  return mSandboxData->p_grGetGlyphAdvanceCallback;
 }
 
 tainted_opaque_gr<gr_face*> gfxFontEntry::GetGrFace() {
@@ -731,8 +747,8 @@ tainted_opaque_gr<gr_face*> gfxFontEntry::GetGrFace() {
     auto cleanup = MakeScopeExit(
         [&] { mSandboxData->sandbox.free_in_sandbox(p_faceOps); });
     p_faceOps->size = sizeof(*p_faceOps);
-    p_faceOps->get_table = mSandboxData->grGetTableCallback;
-    p_faceOps->release_table = mSandboxData->grReleaseTableCallback;
+    p_faceOps->get_table = *(mSandboxData->p_grGetTableCallback);
+    p_faceOps->release_table = *(mSandboxData->p_grReleaseTableCallback);
 
     tl_grGetFontTableCallbackData = this;
     auto face = sandbox_invoke(

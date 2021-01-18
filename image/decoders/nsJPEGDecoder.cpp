@@ -87,7 +87,7 @@ METHODDEF(void) my_error_exit(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_commo
 // Normal JFIF markers can't have more bytes than this.
 #define MAX_JPEG_MARKER_LENGTH (((uint32_t)1 << 16) - 1)
 
-std::once_flag create_rlbox_flag;
+static std::once_flag create_rlbox_flag;
 
 void nsJPEGDecoder::getRLBoxSandbox() {
   static rlbox_sandbox_jpeg sandbox;
