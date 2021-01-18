@@ -31,6 +31,7 @@ echo "Starting. Make sure to isolate cpus 1 then disable scaling with --- sudo c
 
 # param: outputDir/prefix
 # param: mozconfig
+# param ${FFVersions[$j]}
 function runTest(){
 	FINISHED=0
 	for (( l = 0; l < 3; l++ )); do
@@ -38,11 +39,15 @@ function runTest(){
 		pkill -f firefox
 		rm -f ./testing/mozharness/build/local.json
 
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test" 2>&1 | tee "$1_terminal_output.txt"
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test" 2>&1 | tee -a "$1_terminal_output.txt"
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test" 2>&1 | tee -a "$1_terminal_output.txt"
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test" 2>&1 | tee -a "$1_terminal_output.txt"
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test" 2>&1 | tee -a "$1_terminal_output.txt"
+		if [[ "$3" == "$segmentsfizerocost" ]]; then
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee "$1_terminal_output.txt"
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+		else
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test" 2>&1 | tee "$1_terminal_output.txt"
+		fi
 		retVal=${PIPESTATUS[0]}
 		if [ $retVal -eq 0 ]; then
 			FINISHED=1
@@ -64,7 +69,7 @@ function runTest(){
 SAVEDDIR=$PWD
 
 for (( j = 0; j < ${#FFVersions[@]}; j++ )); do
-    runTest "${OUTPUTPATH}/${FFVersions[$j]}" "mozconfig_${FFVersions[$j]}_release"
+    runTest "${OUTPUTPATH}/${FFVersions[$j]}" "mozconfig_${FFVersions[$j]}_release" "${FFVersions[$j]}"
     cd $SAVEDDIR
 done
 
