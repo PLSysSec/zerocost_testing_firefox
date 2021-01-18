@@ -2821,6 +2821,10 @@ bool ContentParent::InitInternal(ProcessPriority aInitialPriority) {
   shouldSandbox = IsContentSandboxEnabled();
 #  endif
 
+#ifdef MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST
+  shouldSandbox = false;
+#endif
+
 #  ifdef XP_LINUX
   if (shouldSandbox) {
     MOZ_ASSERT(!mSandboxBroker);
