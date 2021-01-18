@@ -3,7 +3,8 @@ ac_add_options --target=i686-pc-linux
 ac_add_options --enable-optimize --disable-debug
 ac_add_options --with-wasm-sandboxed-libraries=stock32
 
-mk_add_options MOZ_OBJDIR=../ffbuilds/firefox_latest_stock32_release
+. $topsrcdir/mozconfig_common
+mk_add_options MOZ_OBJDIR=$BROWSER_BUILD_PATH/firefox_latest_stock32_release
 
 export CROSS_COMPILE=1
 export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig

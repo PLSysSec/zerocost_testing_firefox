@@ -2,8 +2,8 @@
 
 # set -o xtrace
 
-# FFBuildDir="/mnt/sata/ffbuilds/"
-FFBuildDir="../ffbuilds/"
+source ./mozconfig_common
+FFBuildDir=$BROWSER_BUILD_PATH
 FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet", "stock", "segmentsfizerocost", "stock32")
 
 if [ -z "$1" ]; then

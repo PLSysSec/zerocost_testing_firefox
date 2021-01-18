@@ -1,0 +1,2 @@
+# export BROWSER_BUILD_PATH=/mnt/sata/ffbuilds
+export BROWSER_BUILD_PATH="../ffbuilds"

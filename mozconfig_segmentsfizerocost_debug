@@ -3,7 +3,8 @@ ac_add_options --target=i686-pc-linux
 
 ac_add_options --with-wasm-sandboxed-libraries=segmentsfizerocost,graphite,ogg,jpeg
 
-mk_add_options MOZ_OBJDIR=../ffbuilds/firefox_latest_segmentsfizerocost_debug
+. $topsrcdir/mozconfig_common
+mk_add_options MOZ_OBJDIR=$BROWSER_BUILD_PATH/firefox_latest_segmentsfizerocost_debug
 ac_add_options --enable-debug
 ac_add_options --disable-optimize
 
