@@ -4,7 +4,7 @@
 
 source ./mozconfig_common
 FFBuildDir=$BROWSER_BUILD_PATH
-FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet", "stock", "segmentsfizerocost", "stock32")
+FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet" "mpkfullsave" "stockindirect" "segmentsfizerocost" "stockindirect32")
 
 if [ -z "$1" ]; then
 	echo "Expected argument $0 output_folder";
