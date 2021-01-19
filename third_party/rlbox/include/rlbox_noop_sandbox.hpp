@@ -10,9 +10,6 @@
 
 #include "rlbox_helpers.hpp"
 
-extern "C" {
-  void* make_value_opaque(void*);
-}
 namespace rlbox {
 
 class rlbox_noop_sandbox;
@@ -174,7 +171,7 @@ protected:
   }
 
 #define rlbox_noop_sandbox_lookup_symbol(func_name)                            \
-  make_value_opaque(reinterpret_cast<void*>(&func_name)) /* NOLINT */
+  reinterpret_cast<void*>(&func_name) /* NOLINT */
 
   template<typename T, typename T_Converted, typename... T_Args>
   auto impl_invoke_with_func_ptr(T_Converted* func_ptr, T_Args&&... params)

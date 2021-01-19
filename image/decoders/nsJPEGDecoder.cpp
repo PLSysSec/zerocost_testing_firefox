@@ -907,6 +907,18 @@ tainted_opaque_jpeg<unsigned char*> nsJPEGDecoder::transfer_input_bytes(
   size_t& transfer_buffer_size,
   bool& used_copy)
 {
+  if (size == 0) {
+    if(buffer == nullptr) {
+      tainted_opaque_jpeg<unsigned char*> ret;
+      ret.set_zero();
+      return ret;
+    } else if (rlbox::from_opaque(transfer_buffer) != nullptr) {
+      return transfer_buffer;
+    } else {
+      size = 1;
+    }
+  }
+
   if (transfer_buffer_size >= size) {
     used_copy = true;
     return transfer_buffer;
