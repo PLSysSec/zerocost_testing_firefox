@@ -21,3 +21,9 @@
     // MingW bug is fixed.
     RLBOX_NOOP_SANDBOX_STATIC_VARIABLES();
 #endif
+
+extern "C" {
+    __attribute__ ((optnone))
+    __attribute__ ((noinline))
+    void* make_value_opaque(void* val) { return val; }
+}
