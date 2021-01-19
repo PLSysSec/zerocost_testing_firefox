@@ -28,7 +28,7 @@
         using rlbox_gr_sandbox_type = rlbox::rlbox_lucet_sandbox;
     #endif
 #else
-    using rlbox_gr_sandbox_type = rlbox::rlbox_noopstaticindirect_sandbox;
+    using rlbox_gr_sandbox_type = rlbox::rlbox_noop_sandbox;
 #endif
 
 using rlbox_sandbox_gr = rlbox::rlbox_sandbox<rlbox_gr_sandbox_type>;

@@ -11,13 +11,13 @@
     #include "mozilla/rlbox/rlbox.hpp"
     RLBOX_DYLIB_SANDBOX_STATIC_VARIABLES();
 #else
-    #define RLBOX_USE_STATIC_CALLS() rlbox_noopstaticindirect_sandbox_lookup_symbol
-    #include "mozilla/rlbox/rlbox_noopstaticindirect_sandbox.hpp"
+    #define RLBOX_USE_STATIC_CALLS() rlbox_noop_sandbox_lookup_symbol
+    #include "mozilla/rlbox/rlbox_noop_sandbox.hpp"
 
     #include "mozilla/rlbox/rlbox.hpp"
 
     // The MingW compiler does not correctly handle static thread_local inline
     // members. We instead TLS storage via functions. This can be removed if the
     // MingW bug is fixed.
-    RLBOX_NOOPSTATICINDIRECT_SANDBOX_STATIC_VARIABLES();
+    RLBOX_NOOP_SANDBOX_STATIC_VARIABLES();
 #endif

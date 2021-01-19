@@ -23,8 +23,8 @@
     #endif
 #else
     // Extra configuration for no-op sandbox
-    #  define RLBOX_USE_STATIC_CALLS() rlbox_noopstaticindirect_sandbox_lookup_symbol
-    #  include "mozilla/rlbox/rlbox_noopstaticindirect_sandbox.hpp"
+    #  define RLBOX_USE_STATIC_CALLS() rlbox_noop_sandbox_lookup_symbol
+    #  include "mozilla/rlbox/rlbox_noop_sandbox.hpp"
 #endif
 
 #include "mozilla/rlbox/rlbox.hpp"
