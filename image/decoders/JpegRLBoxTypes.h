@@ -28,7 +28,7 @@
         using rlbox_jpeg_sandbox_type = rlbox::rlbox_lucet_sandbox;
     #endif
 #else
-    using rlbox_jpeg_sandbox_type = rlbox::rlbox_noop_sandbox;
+    using rlbox_jpeg_sandbox_type = rlbox::rlbox_noopstaticindirect_sandbox;
 #endif
 
 using rlbox_sandbox_jpeg = rlbox::rlbox_sandbox<rlbox_jpeg_sandbox_type>;
