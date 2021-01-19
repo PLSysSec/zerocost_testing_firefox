@@ -616,7 +616,7 @@ hb_face_t* gfxFontEntry::GetHBFace() {
   return hb_face_reference(mHBFace);
 }
 
-static std::once_flag create_rlbox_flag;
+std::once_flag graphite_create_rlbox_flag;
 static rlbox_sandbox_gr graphiteSandbox;
 static sandbox_callback_gr<const void* (*)(const void*, unsigned int, size_t*)>
     g_grGetTableCallback;
@@ -640,7 +640,7 @@ struct gfxFontEntry::GrSandboxData {
     p_grReleaseTableCallback(&g_grReleaseTableCallback),
     p_grGetGlyphAdvanceCallback(&g_grGetGlyphAdvanceCallback)
    {
-    std::call_once(create_rlbox_flag, [&](){
+    std::call_once(graphite_create_rlbox_flag, [&](){
       #ifdef MOZ_WASM_SANDBOXING_GRAPHITE
         #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST) || defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
           sandbox.create_sandbox(mozilla::ipc::GetSandboxedGraphitePath().get());

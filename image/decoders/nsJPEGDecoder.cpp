@@ -87,7 +87,7 @@ METHODDEF(void) my_error_exit(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_commo
 // Normal JFIF markers can't have more bytes than this.
 #define MAX_JPEG_MARKER_LENGTH (((uint32_t)1 << 16) - 1)
 
-static std::once_flag create_rlbox_flag;
+std::once_flag jpeg_create_rlbox_flag;
 
 void nsJPEGDecoder::getRLBoxSandbox() {
   static rlbox_sandbox_jpeg sandbox;
@@ -97,7 +97,7 @@ void nsJPEGDecoder::getRLBoxSandbox() {
   static sandbox_callback_jpeg<boolean(*)(j_decompress_ptr)> fill_input_buffer_cb;
   static sandbox_callback_jpeg<void(*)(j_common_ptr)> my_error_exit_cb;
 
-  std::call_once(create_rlbox_flag, [&](){
+  std::call_once(jpeg_create_rlbox_flag, [&](){
   #ifdef MOZ_WASM_SANDBOXING_JPEG
     #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST) || defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
       sandbox.create_sandbox(mozilla::ipc::GetSandboxedJpegPath().get());
