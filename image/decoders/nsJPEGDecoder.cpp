@@ -99,7 +99,7 @@ void nsJPEGDecoder::getRLBoxSandbox() {
 
   std::call_once(jpeg_create_rlbox_flag, [&](){
   #ifdef MOZ_WASM_SANDBOXING_JPEG
-    #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST) || defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
+    #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE32) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST) || defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
       sandbox.create_sandbox(mozilla::ipc::GetSandboxedJpegPath().get());
     #else
       // Firefox preloads the library externally to ensure we won't be stopped

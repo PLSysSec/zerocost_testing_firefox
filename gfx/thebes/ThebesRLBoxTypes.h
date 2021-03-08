@@ -9,7 +9,7 @@
 #include "mozilla/rlbox/rlbox_types.hpp"
 
 #ifdef MOZ_WASM_SANDBOXING_GRAPHITE
-    #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST)
+    #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE32) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST)
         namespace rlbox {
         class rlbox_mpk_sandbox;
         }

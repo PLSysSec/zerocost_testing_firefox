@@ -41,7 +41,7 @@ elif CONFIG['MOZ_WASM_SANDBOXING_FULLSAVE'] or CONFIG['MOZ_WASM_SANDBOXING_REGSA
         '/../zerocost_testing_sandbox/c_src/trampoline_c.c',
         'rlbox_lucet_thread_locals.cpp'
     ]
-elif CONFIG['MOZ_WASM_SANDBOXING_MPKFULLSAVE']:
+elif CONFIG['MOZ_WASM_SANDBOXING_MPKFULLSAVE'] or CONFIG['MOZ_WASM_SANDBOXING_MPKFULLSAVE32']:
 
     EXPORTS.mozilla.rlbox += [
         '/../rlbox_mpk_sandbox/include/rlbox_mpk_sandbox.hpp'
@@ -51,8 +51,16 @@ elif CONFIG['MOZ_WASM_SANDBOXING_MPKFULLSAVE']:
         '/../rlbox_mpk_sandbox/include/ctx_save_trampoline.h'
     ]
 
+    if CONFIG['MOZ_WASM_SANDBOXING_MPKFULLSAVE']:
+        SOURCES += [
+            '/../rlbox_mpk_sandbox/c_src/trampoline_asm.S',
+        ]
+    else:
+        SOURCES += [
+            '/../rlbox_mpk_sandbox/c_src/trampoline_asm_32.S',
+        ]
+
     SOURCES += [
-        '/../rlbox_mpk_sandbox/c_src/trampoline_asm.S',
         '/../rlbox_mpk_sandbox/c_src/trampoline_c.c',
         'rlbox_mpk_thread_locals.cpp'
     ]

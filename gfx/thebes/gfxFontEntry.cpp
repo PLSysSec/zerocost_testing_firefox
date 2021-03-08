@@ -642,7 +642,7 @@ struct gfxFontEntry::GrSandboxData {
    {
     std::call_once(graphite_create_rlbox_flag, [&](){
       #ifdef MOZ_WASM_SANDBOXING_GRAPHITE
-        #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST) || defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
+        #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE32) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST) || defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
           sandbox.create_sandbox(mozilla::ipc::GetSandboxedGraphitePath().get());
         #else
           // Firefox preloads the library externally to ensure we won't be stopped by

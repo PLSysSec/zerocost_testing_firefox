@@ -12,7 +12,7 @@
 #include "mozilla/rlbox/rlbox_config.h"
 
 #ifdef MOZ_WASM_SANDBOXING_OGG
-    #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST)
+    #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE32) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST)
         #  include "mozilla/rlbox/rlbox_mpk_sandbox.hpp"
     #elif defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST)
         #  include "mozilla/rlbox/rlbox_segmentsfi_sandbox.hpp"

@@ -127,9 +127,9 @@ if CONFIG['OS_ARCH'] == 'WINNT' and CONFIG['CC_TYPE'] not in ('clang', 'gcc'):
     LDFLAGS += ['/HEAP:0x40000']
 
 if CONFIG['MOZ_WASM_SANDBOXING_MPKZEROCOST']:
-    LDFLAGS += [ '-rdynamic', '-Wl,--whole-archive', TOPSRCDIR + '/../ffbuilds/zerocost_llvm_install/lib/clang/12.0.0/lib/linux/libclang_rt.safestack-x86_64.a', '-Wl,--no-whole-archive']
+    LDFLAGS += [ '-rdynamic', '-Wl,--whole-archive', '/mnt/sata/ffbuilds/zerocost_llvm_install/lib/clang/12.0.0/lib/linux/libclang_rt.safestack-x86_64.a', '-Wl,--no-whole-archive']
 elif CONFIG['MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST']:
-    LDFLAGS += [ '-rdynamic', '-Wl,--whole-archive', TOPSRCDIR + '/../ffbuilds/zerocost_llvm_install/lib/clang/12.0.0/lib/linux/libclang_rt.safestack-i386.a', '-Wl,--no-whole-archive']
+    LDFLAGS += [ '-rdynamic', '-Wl,--whole-archive', '/mnt/sata/ffbuilds/zerocost_llvm_install/lib/clang/12.0.0/lib/linux/libclang_rt.safestack-i386.a', '-Wl,--no-whole-archive']
 
 DisableStlWrapping()
 
