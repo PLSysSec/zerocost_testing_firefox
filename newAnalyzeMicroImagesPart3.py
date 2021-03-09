@@ -86,6 +86,11 @@ def main():
         parsed2 = json.loads(read(inputFolderName, "mpkfullsave_terminal_analysis.json"))["data"]
         computeSummaryTwo(os.path.join(inputFolderName, "all_comparempk.dat"), parsed1, parsed2, "MPK")
 
+    if os.path.exists(os.path.join(inputFolderName, "mpkfullsave32_terminal_analysis.json")):
+        parsed1 = json.loads(read(inputFolderName, "stockindirect32_terminal_analysis.json"))["data"]
+        parsed2 = json.loads(read(inputFolderName, "mpkfullsave32_terminal_analysis.json"))["data"]
+        computeSummaryTwo(os.path.join(inputFolderName, "all_comparempk32.dat"), parsed1, parsed2, "MPK32")
+
     if os.path.exists(os.path.join(inputFolderName, "segmentsfizerocost_terminal_analysis.json")):
         parsed1 = json.loads(read(inputFolderName, "stockindirect32_terminal_analysis.json"))["data"]
         parsed2 = json.loads(read(inputFolderName, "segmentsfizerocost_terminal_analysis.json"))["data"]
