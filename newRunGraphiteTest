@@ -4,8 +4,8 @@
 
 source ./mozconfig_common
 FFBuildDir=$BROWSER_BUILD_PATH
-FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet" "mpkfullsave" "mpkfullsave32" "stockindirect" "segmentsfizerocost" "stockindirect32")
-# FFVersions=("stockindirect32" "mpkfullsave32")
+FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet" "mpkfullsave32" "segmentsfizerocost" "stockindirect32")
+# FFVersions=("mpkfullsave32" "segmentsfizerocost" "stockindirect32")
 
 if [ -z "$1" ]; then
 	echo "Expected argument $0 output_folder";
@@ -40,15 +40,11 @@ function runTest(){
 		pkill -f firefox
 		rm -f ./testing/mozharness/build/local.json
 
-		if [[ "$3" == "segmentsfizerocost" ]]; then
-			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee "$1_terminal_output.txt"
-			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
-			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
-			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
-			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
-		else
-			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test" 2>&1 | tee "$1_terminal_output.txt"
-		fi
+		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee "$1_terminal_output.txt"
+		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
 		retVal=${PIPESTATUS[0]}
 		if [ $retVal -eq 0 ]; then
 			FINISHED=1
