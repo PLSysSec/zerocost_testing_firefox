@@ -84,7 +84,7 @@ def main():
         computeSummary64(os.path.join(inputFolderName, "all_compare.dat"), parsed1, parsed2, parsed3, parsed4, parsed5)
 
     if os.path.exists(os.path.join(inputFolderName, "segmentsfizerocost_terminal_analysis.json")):
-        parsed1 = json.loads(read(inputFolderName, "stockindirect32_terminal_analysis.json"))["data"]
+        parsed1 = json.loads(read(inputFolderName, "stock32_terminal_analysis.json"))["data"]
         parsed2 = json.loads(read(inputFolderName, "segmentsfizerocost_terminal_analysis.json"))["data"]
         parsed3 = json.loads(read(inputFolderName, "mpkfullsave32_terminal_analysis.json"))["data"]
         computeSummary32(os.path.join(inputFolderName, "all_compare32.dat"), parsed1, parsed2, parsed3)
