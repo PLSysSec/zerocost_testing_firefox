@@ -403,8 +403,8 @@ void BackgroundHangManager::RunMonitorThread() {
         if (MOZ_UNLIKELY(hangTime >= currentThread->mTimeout)) {
 #ifdef MOZ_GECKO_PROFILER
           // A hang started, collect a stack
-          currentThread->mStackHelper.GetStack(
-              currentThread->mHangStack, currentThread->mRunnableName, true);
+          // currentThread->mStackHelper.GetStack(
+          //     currentThread->mHangStack, currentThread->mRunnableName, true);
 #endif
 
           // If we hang immediately on waking, then the most recently collected
