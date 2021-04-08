@@ -4886,7 +4886,7 @@ static bool CheckGraphiteString(const char* msg) {
     long int time_ns = time_val;
 
     auto graphite_count = g_graphite_count++;
-    printf("Capture_Time:Graphite,%u,%ld|\n", graphite_count, time_ns);
+    printf("Capture_Time:Graphite,%u,%ld,%lu|\n", graphite_count, time_ns, (long unsigned) getpid());
 
     return true;
   }
