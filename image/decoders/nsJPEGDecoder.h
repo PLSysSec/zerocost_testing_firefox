@@ -105,11 +105,13 @@ class nsJPEGDecoder : public Decoder {
 
  private:
   void getRLBoxSandbox();
+  void releaseRLBoxSandbox();
   sandbox_callback_jpeg<void(*)(jpeg_decompress_struct *)>* m_init_source_cb;
   sandbox_callback_jpeg<void(*)(j_decompress_ptr)>* m_term_source_cb;
   sandbox_callback_jpeg<void(*)(j_decompress_ptr, long)>* m_skip_input_data_cb;
   sandbox_callback_jpeg<boolean(*)(j_decompress_ptr)>* m_fill_input_buffer_cb;
   sandbox_callback_jpeg<void(*)(j_common_ptr)>* m_my_error_exit_cb;
+  size_t m_chosen_sandbox_index = -1;
 
   std::string mImageString;
  public:

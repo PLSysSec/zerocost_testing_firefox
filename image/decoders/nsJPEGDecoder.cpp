@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <deque>
 #include <mutex>
 
 #include "imgFrame.h"
@@ -87,46 +88,86 @@ METHODDEF(void) my_error_exit(rlbox_sandbox_jpeg& aSandbox, tainted_jpeg<j_commo
 // Normal JFIF markers can't have more bytes than this.
 #define MAX_JPEG_MARKER_LENGTH (((uint32_t)1 << 16) - 1)
 
-std::once_flag jpeg_create_rlbox_flag;
+
+struct nsJPEGDecoderSandboxData {
+  bool used;
+  rlbox_sandbox_jpeg sandbox;
+  sandbox_callback_jpeg<void(*)(jpeg_decompress_struct *)> init_source_cb;
+  sandbox_callback_jpeg<void(*)(j_decompress_ptr)> term_source_cb;
+  sandbox_callback_jpeg<void(*)(j_decompress_ptr, long)> skip_input_data_cb;
+  sandbox_callback_jpeg<boolean(*)(j_decompress_ptr)> fill_input_buffer_cb;
+  sandbox_callback_jpeg<void(*)(j_common_ptr)> my_error_exit_cb;
+};
+
+static std::deque<nsJPEGDecoderSandboxData> jpeg_sandboxes;
+static std::mutex jpeg_sandbox_create_mutex;
 
 void nsJPEGDecoder::getRLBoxSandbox() {
-  static rlbox_sandbox_jpeg sandbox;
-  static sandbox_callback_jpeg<void(*)(jpeg_decompress_struct *)> init_source_cb;
-  static sandbox_callback_jpeg<void(*)(j_decompress_ptr)> term_source_cb;
-  static sandbox_callback_jpeg<void(*)(j_decompress_ptr, long)> skip_input_data_cb;
-  static sandbox_callback_jpeg<boolean(*)(j_decompress_ptr)> fill_input_buffer_cb;
-  static sandbox_callback_jpeg<void(*)(j_common_ptr)> my_error_exit_cb;
+  std::lock_guard<std::mutex> lock(jpeg_sandbox_create_mutex);
 
-  std::call_once(jpeg_create_rlbox_flag, [&](){
-  #ifdef MOZ_WASM_SANDBOXING_JPEG
-    #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE32) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST) || defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
-      sandbox.create_sandbox(mozilla::ipc::GetSandboxedJpegPath().get());
+  nsJPEGDecoderSandboxData* chosenSandbox = nullptr;
+  size_t chosenSandboxIndex = 0;
+
+  for(auto& sbx : jpeg_sandboxes) {
+    if (!sbx.used) {
+      chosenSandbox = &sbx;
+      break;
+    }
+    chosenSandboxIndex++;
+  }
+
+  // could not find a sandbox.
+  // create a new sandbox at the end of the queue
+  // chosenSandboxIndex already points to the end of the vector
+  if (chosenSandbox == nullptr) {
+    // create sandbox add to jpeg_sandboxes and set chosen_sandbox
+    chosenSandbox = &(jpeg_sandboxes.emplace_back());
+    #ifdef MOZ_WASM_SANDBOXING_JPEG
+      #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE32) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST) || defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
+        chosenSandbox->sandbox.create_sandbox(mozilla::ipc::GetSandboxedJpegPath().get());
+      #else
+        // Firefox preloads the library externally to ensure we won't be stopped
+        // by the content sandbox
+        const bool external_loads_exist = true;
+        // See Bug 1606981: In some environments allowing stdio in the wasm sandbox
+        // fails as the I/O redirection involves querying meta-data of file
+        // descriptors. This querying fails in some environments.
+        const bool allow_stdio = false;
+        chosenSandbox->sandbox.create_sandbox(mozilla::ipc::GetSandboxedJpegPath().get(),
+                                external_loads_exist, allow_stdio);
+      #endif
     #else
-      // Firefox preloads the library externally to ensure we won't be stopped
-      // by the content sandbox
-      const bool external_loads_exist = true;
-      // See Bug 1606981: In some environments allowing stdio in the wasm sandbox
-      // fails as the I/O redirection involves querying meta-data of file
-      // descriptors. This querying fails in some environments.
-      const bool allow_stdio = false;
-      sandbox.create_sandbox(mozilla::ipc::GetSandboxedJpegPath().get(),
-                              external_loads_exist, allow_stdio);
+      chosenSandbox->sandbox.create_sandbox();
     #endif
-  #else
-    sandbox.create_sandbox();
-  #endif
-    init_source_cb = sandbox.register_callback(init_source);
-    term_source_cb = sandbox.register_callback(term_source);
-    skip_input_data_cb = sandbox.register_callback(skip_input_data);
-    fill_input_buffer_cb = sandbox.register_callback(fill_input_buffer);
-    my_error_exit_cb = sandbox.register_callback(my_error_exit);
-  });
-  mSandbox = &sandbox;
-  m_init_source_cb = &init_source_cb;
-  m_term_source_cb = &term_source_cb;
-  m_skip_input_data_cb = &skip_input_data_cb;
-  m_fill_input_buffer_cb = &fill_input_buffer_cb;
-  m_my_error_exit_cb = &my_error_exit_cb;
+    chosenSandbox->init_source_cb = chosenSandbox->sandbox.register_callback(init_source);
+    chosenSandbox->term_source_cb = chosenSandbox->sandbox.register_callback(term_source);
+    chosenSandbox->skip_input_data_cb = chosenSandbox->sandbox.register_callback(skip_input_data);
+    chosenSandbox->fill_input_buffer_cb = chosenSandbox->sandbox.register_callback(fill_input_buffer);
+    chosenSandbox->my_error_exit_cb = chosenSandbox->sandbox.register_callback(my_error_exit);
+  }
+
+  chosenSandbox->used = true;
+  mSandbox = &(chosenSandbox->sandbox);
+  m_init_source_cb = &(chosenSandbox->init_source_cb);
+  m_term_source_cb = &(chosenSandbox->term_source_cb);
+  m_skip_input_data_cb = &(chosenSandbox->skip_input_data_cb);
+  m_fill_input_buffer_cb = &(chosenSandbox->fill_input_buffer_cb);
+  m_my_error_exit_cb = &(chosenSandbox->my_error_exit_cb);
+  m_chosen_sandbox_index = chosenSandboxIndex;
+}
+
+void nsJPEGDecoder::releaseRLBoxSandbox()
+{
+  mSandbox = nullptr;
+  m_init_source_cb = nullptr;
+  m_term_source_cb = nullptr;
+  m_skip_input_data_cb = nullptr;
+  m_fill_input_buffer_cb = nullptr;
+  m_my_error_exit_cb = nullptr;
+
+  std::lock_guard<std::mutex> lock(jpeg_sandbox_create_mutex);
+  jpeg_sandboxes[m_chosen_sandbox_index].used = false;
+  m_chosen_sandbox_index = -1;
 }
 
 inline std::string getImageURIString(RasterImage* aImage)
@@ -134,7 +175,7 @@ inline std::string getImageURIString(RasterImage* aImage)
   nsIURI* imageURI = nullptr;
 
   //Try to retrieve the image URI from the ImageDecoder request
-  if(aImage != nullptr) { 
+  if(aImage != nullptr) {
     imageURI = aImage->GetURI();
   }
 
@@ -253,6 +294,8 @@ nsJPEGDecoder::~nsJPEGDecoder() {
     printf("Capture_Time:%s,%u,%ld|\n", tag.c_str(), jpeg_count, time_ns);
     // printf("Fn calls: %d, Callbacks: %d\n", num_fncalls, num_callbacks);
   }
+
+  releaseRLBoxSandbox();
 
   free(mBackBuffer);
   mBackBuffer = nullptr;
