@@ -4,8 +4,8 @@
 
 source ./mozconfig_common
 FFBuildDir=$BROWSER_BUILD_PATH
-FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet" "mpkfullsave32" "segmentsfizerocost" "stockindirect32")
-# FFVersions=("mpkfullsave32" "segmentsfizerocost" "stockindirect32")
+FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet" "mpkfullsave32" "segmentsfizerocost" "stock32")
+# FFVersions=("mpkfullsave32" "segmentsfizerocost" "stock32")
 
 if [ -z "$1" ]; then
 	echo "Expected argument $0 output_folder";
@@ -40,11 +40,15 @@ function runTest(){
 		pkill -f firefox
 		rm -f ./testing/mozharness/build/local.json
 
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee "$1_terminal_output.txt"
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+		if [[ "$3" == "segmentsfizerocost" || "$3" == *"32"* ]]; then
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee "$1_terminal_output.txt"
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+		else
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test" 2>&1 | tee "$1_terminal_output.txt"
+		fi
 		retVal=${PIPESTATUS[0]}
 		if [ $retVal -eq 0 ]; then
 			FINISHED=1
@@ -74,3 +78,4 @@ for (( j = 0; j < ${#FFVersions[@]}; j++ )); do
 	./newAnalyzePerf.py "${OUTPUTPATH}/${FFVersions[$j]}_terminal_output.txt" 2>&1 >> "${OUTPUTPATH}/${FFVersions[$j]}_terminal_analysis.json"
 done
 
+./newAnalyzeMicroImagesPart3.py "${OUTPUTPATH}/"

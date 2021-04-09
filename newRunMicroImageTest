@@ -4,7 +4,7 @@
 
 source ./mozconfig_common
 FFBuildDir=$BROWSER_BUILD_PATH
-FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet" "mpkfullsave32" "segmentsfizerocost" "stockindirect32")
+FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet" "mpkfullsave32" "segmentsfizerocost" "stock32")
 # FFVersions=("mpkfullsave32" "segmentsfizerocost" "stockindirect32")
 
 if [ -z "$1" ]; then
