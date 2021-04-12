@@ -87,6 +87,12 @@ rlbox_sandbox_ogg* OggDemuxer::CreateSandbox() {
 #ifdef MOZ_WASM_SANDBOXING_OGG
   #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE32) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST) || defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
     sandbox->create_sandbox(mozilla::ipc::GetSandboxedOggPath().get());
+  #elif defined(MOZ_WASM_SANDBOXING_NACLFULLSAVE32)
+    #define QUOTE_HELP(x) #x
+    #define QUOTE(x) QUOTE_HELP(x)
+    sandbox->create_sandbox(mozilla::ipc::GetSandboxedOggPath().get(), QUOTE(MOZ_NACL32_LIBC));
+    #undef QUOTE
+    #undef QUOTE_HELP
   #else
     // Firefox preloads the library externally to ensure we won't be stopped
     // by the content sandbox

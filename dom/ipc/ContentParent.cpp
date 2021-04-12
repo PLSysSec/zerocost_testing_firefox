@@ -2821,7 +2821,7 @@ bool ContentParent::InitInternal(ProcessPriority aInitialPriority) {
   shouldSandbox = IsContentSandboxEnabled();
 #  endif
 
-#ifdef MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST
+#if defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST) || defined(MOZ_WASM_SANDBOXING_NACLFULLSAVE32)
   shouldSandbox = false;
 #endif
 

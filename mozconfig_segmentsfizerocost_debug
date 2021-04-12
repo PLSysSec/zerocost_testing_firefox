@@ -8,6 +8,8 @@ mk_add_options MOZ_OBJDIR=$BROWSER_BUILD_PATH/firefox_latest_segmentsfizerocost_
 ac_add_options --enable-debug
 ac_add_options --disable-optimize
 
+ac_add_options --with-zerocost-llvm=$BROWSER_BUILD_PATH/zerocost_llvm_install
+
 export CROSS_COMPILE=1
 export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig/
 

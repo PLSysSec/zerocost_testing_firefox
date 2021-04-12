@@ -6,6 +6,8 @@ ac_add_options --with-wasm-sandboxed-libraries=segmentsfizerocost,graphite,ogg,j
 . $topsrcdir/mozconfig_common
 mk_add_options MOZ_OBJDIR=$BROWSER_BUILD_PATH/firefox_latest_segmentsfizerocost_release
 
+ac_add_options --with-zerocost-llvm=$BROWSER_BUILD_PATH/zerocost_llvm_install
+
 export CROSS_COMPILE=1
 export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig
 

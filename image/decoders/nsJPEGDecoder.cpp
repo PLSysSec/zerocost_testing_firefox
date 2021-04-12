@@ -125,6 +125,12 @@ void nsJPEGDecoder::getRLBoxSandbox() {
     #ifdef MOZ_WASM_SANDBOXING_JPEG
       #if defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE) || defined(MOZ_WASM_SANDBOXING_MPKFULLSAVE32) || defined(MOZ_WASM_SANDBOXING_MPKZEROCOST) || defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
         chosenSandbox->sandbox.create_sandbox(mozilla::ipc::GetSandboxedJpegPath().get());
+      #elif defined(MOZ_WASM_SANDBOXING_NACLFULLSAVE32)
+        #define QUOTE_HELP(x) #x
+        #define QUOTE(x) QUOTE_HELP(x)
+        chosenSandbox->sandbox.create_sandbox(mozilla::ipc::GetSandboxedJpegPath().get(), QUOTE(MOZ_NACL32_LIBC));
+        #undef QUOTE
+        #undef QUOTE_HELP
       #else
         // Firefox preloads the library externally to ensure we won't be stopped
         // by the content sandbox

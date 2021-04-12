@@ -5,6 +5,8 @@ ac_add_options --with-wasm-sandboxed-libraries=mpkzerocost,graphite,ogg,jpeg
 . $topsrcdir/mozconfig_common
 mk_add_options MOZ_OBJDIR=$BROWSER_BUILD_PATH/firefox_latest_mpkzerocost_release
 
+ac_add_options --with-zerocost-llvm=$BROWSER_BUILD_PATH/zerocost_llvm_install
+
 export LUCETC="$topsrcdir/wasm_to_so_copy.py"
 export WASM_CC="$topsrcdir/wasm_to_zerocost_cc_64.py"
 export WASM_CXX="$topsrcdir/wasm_to_zerocost_cxx_64.py"

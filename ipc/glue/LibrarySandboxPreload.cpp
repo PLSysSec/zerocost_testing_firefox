@@ -69,7 +69,7 @@ void PreloadSandboxedDynamicLibraries() {
   // This preloads wasm sandboxed libraries before the process level sandbox is
   // enabled. Currently, this is only needed for Linux as Mac allows loading
   // libraries from the package file.
-#if defined(XP_LINUX)
+#if defined(XP_LINUX) && !defined(MOZ_WASM_SANDBOXING_NACLFULLSAVE32)
 #  if defined(MOZ_WASM_SANDBOXING_GRAPHITE)
   if (!PreloadLibrary(GetSandboxedGraphitePath())) {
     MOZ_CRASH("Library preload failure: Failed to load libgraphite\n");

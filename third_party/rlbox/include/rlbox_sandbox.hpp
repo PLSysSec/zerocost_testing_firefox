@@ -316,10 +316,6 @@ private:
       }
     }
 
-    detail::dynamic_check(
-      false,
-      "Internal error: Could not find the sandbox associated with example "
-      "pointer. Please file a bug.");
     return nullptr;
   }
 
@@ -576,7 +572,12 @@ public:
    */
   static inline bool is_in_same_sandbox(const void* p1, const void* p2)
   {
-    return T_Sbx::impl_is_in_same_sandbox(p1, p2);
+    const size_t num_args = detail::func_arg_nums_v<decltype(T_Sbx::impl_is_in_same_sandbox)>;
+    if constexpr (num_args == 2) {
+      return T_Sbx::impl_is_in_same_sandbox(p1, p2);
+    } else {
+      return T_Sbx::impl_is_in_same_sandbox(p1, p2, find_sandbox_from_example);
+    }
   }
 
   /**

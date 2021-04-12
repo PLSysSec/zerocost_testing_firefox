@@ -1749,8 +1749,28 @@ set_define('MOZ_HAS_REMOTE', has_remote)
 # RLBox Library Sandboxing wasm support
 # ==============================================================
 
+option('--with-zerocost-llvm', nargs=1, env='ZEROCOSTLLVMDIR', help='Path to zerocost llvm')
+
+@depends('--with-zerocost-llvm')
+def zerocost_llvm(value):
+    if value:
+        return value[0]
+
+set_define('MOZ_ZEROCOST_LLVM', zerocost_llvm)
+set_config('MOZ_ZEROCOST_LLVM', zerocost_llvm)
+
+option('--with-nacl32-libc', nargs=1, env='NACL32LIBCPATH', help='Path to nacl32 libc')
+
+@depends('--with-nacl32-libc')
+def nacl32_libc(value):
+    if value:
+        return value[0]
+
+set_define('MOZ_NACL32_LIBC', nacl32_libc)
+set_config('MOZ_NACL32_LIBC', nacl32_libc)
+
 def wasm_sandboxing_libraries():
-    return ('stock', 'stock32', 'stockindirect', 'stockindirect32', 'lucet', 'zerocost', 'fullsave', 'regsave', 'fullsavewindows', 'mpkfullsave', 'mpkfullsave32', 'mpkzerocost', 'segmentsfizerocost', 'graphite', 'ogg', 'jpeg', 'png', )
+    return ('stock', 'stock32', 'stockindirect', 'stockindirect32', 'lucet', 'zerocost', 'fullsave', 'regsave', 'fullsavewindows', 'mpkfullsave', 'mpkfullsave32', 'mpkzerocost', 'segmentsfizerocost', 'naclfullsave32', 'graphite', 'ogg', 'jpeg', 'png', )
 
 option('--with-wasm-sandboxed-libraries',
        env='WASM_SANDBOXED_LIBRARIES',

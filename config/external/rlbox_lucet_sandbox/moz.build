@@ -72,7 +72,7 @@ elif CONFIG['MOZ_WASM_SANDBOXING_MPKFULLSAVE'] or CONFIG['MOZ_WASM_SANDBOXING_MP
 
     SOURCES += [
         '/../zerocost_heavy_trampoline/c_src/trampoline_src.cpp',
-        'rlbox_mpk_thread_locals.cpp'
+        'rlbox_other_thread_locals.cpp'
     ]
 
 elif CONFIG['MOZ_WASM_SANDBOXING_MPKZEROCOST']:
@@ -82,7 +82,7 @@ elif CONFIG['MOZ_WASM_SANDBOXING_MPKZEROCOST']:
     ]
 
     SOURCES += [
-        'rlbox_mpk_thread_locals.cpp'
+        'rlbox_other_thread_locals.cpp'
     ]
 
 elif CONFIG['MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST']:
@@ -98,8 +98,32 @@ elif CONFIG['MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST']:
     SOURCES += [
         '/../rlbox_segmentsfizerocost_sandbox/c_src/segmentsfi_sandbox_runtime.cpp',
         '/../rlbox_segmentsfizerocost_sandbox/c_src/trampoline.S',
-        'rlbox_mpk_thread_locals.cpp'
+        'rlbox_other_thread_locals.cpp'
     ]
+
+elif CONFIG['MOZ_WASM_SANDBOXING_NACLFULLSAVE32']:
+
+    EXPORTS.mozilla.rlbox += [
+        '/../rlbox_nacl_sandbox/include/rlbox_nacl_sandbox.hpp'
+    ]
+
+    EXPORTS += [
+        '/../rlbox_nacl_sandbox/build_release/_deps/modnacl-src/native_client/src/trusted/dyn_ldr/dyn_ldr_lib.h'
+    ]
+
+    SOURCES += [
+        'rlbox_other_thread_locals.cpp'
+    ]
+
+    if CONFIG["MOZ_DEBUG"]:
+        OS_LIBS += ['-L$(topsrcdir)/../rlbox_nacl_sandbox/build_release/_deps/modnacl-src/native_client/scons-out-firefox/dbg-linux-x86-32/lib']
+    else:
+        OS_LIBS += ['-L$(topsrcdir)/../rlbox_nacl_sandbox/build_release/_deps/modnacl-src/native_client/scons-out-firefox/opt-linux-x86-32/lib']
+
+    OS_LIBS += [
+        '-ldyn_ldr', '-lsel', '-lnacl_error_code', '-lenv_cleanser', '-lnrd_xfer', '-lnacl_perf_counter', '-lnacl_base', '-limc',
+        '-lnacl_fault_inject', '-lnacl_interval', '-lplatform_qual_lib', '-lvalidators', '-ldfa_validate_caller_x86_32', '-lcpu_features',
+        '-lvalidation_cache', '-lplatform', '-lgio', '-lnccopy_x86_32']
 
 else:
     error('Sandboxing transition type not set')

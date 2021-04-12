@@ -16,6 +16,8 @@
         #  include "mozilla/rlbox/rlbox_mpk_sandbox.hpp"
     #elif defined(MOZ_WASM_SANDBOXING_SEGMENTSFIZEROCOST)
         #  include "mozilla/rlbox/rlbox_segmentsfi_sandbox.hpp"
+    #elif defined(MOZ_WASM_SANDBOXING_NACLFULLSAVE32)
+        #  include "mozilla/rlbox/rlbox_nacl_sandbox.hpp"
     #elif defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
         #  include "mozilla/rlbox/rlbox_dylib_sandbox.hpp"
     #else

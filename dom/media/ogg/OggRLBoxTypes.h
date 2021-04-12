@@ -19,6 +19,11 @@
         class rlbox_segmentsfi_sandbox;
         }
         using rlbox_ogg_sandbox_type = rlbox::rlbox_segmentsfi_sandbox;
+    #elif defined(MOZ_WASM_SANDBOXING_NACLFULLSAVE32)
+        namespace rlbox {
+        class rlbox_nacl_sandbox;
+        }
+        using rlbox_ogg_sandbox_type = rlbox::rlbox_nacl_sandbox;
     #elif defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT) || defined(MOZ_WASM_SANDBOXING_STOCKINDIRECT32)
         using rlbox_ogg_sandbox_type = rlbox::rlbox_dylib_sandbox;
     #else
