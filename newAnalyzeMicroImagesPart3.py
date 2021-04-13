@@ -11,7 +11,7 @@ def getMedian(els, group):
     for el in els:
         if group in el["Group"]:
             return float(el["Median"].replace(',', ''))
-    raise RuntimeError("Group not found")
+    raise RuntimeError("Group not found: " + group)
 
 def getGroups(els):
     ret = []
@@ -45,22 +45,24 @@ def computeSummary64(summaryFile, parsed1, parsed2, parsed3, parsed5, parsed6):
                 str(fullsavewindows_val) + " (" + getOverhead(fullsavewindows_val, zerocost_val) + ")"
             ])
 
-def computeSummary32(summaryFile, parsed1, parsed2, parsed3):
+def computeSummary32(summaryFile, parsed1, parsed2, parsed3, parsed4):
     with open(summaryFile, "w") as f:
         writer = csv.writer(f)
-        writer.writerow(["Image", "Stock", "SegmentSFI", "MPK"])
+        writer.writerow(["Image", "Stock", "SegmentSFI", "MPK", "NaCl"])
 
         groups = getGroups(parsed1)
         for group in groups:
             stock_val = getMedian(parsed1, group)
             segmentsfi_val = getMedian(parsed2, group)
             mpk_val = getMedian(parsed3, group)
+            nacl_val = getMedian(parsed4, group)
 
             writer.writerow([
                 group,
                 str(stock_val)  + " (" + getOverhead(stock_val  , stock_val) + ")",
                 str(segmentsfi_val) + " (" + getOverhead(segmentsfi_val , stock_val) + ")",
-                str(mpk_val) + " (" + getOverhead(mpk_val , stock_val) + ")"
+                str(mpk_val) + " (" + getOverhead(mpk_val , stock_val) + ")",
+                str(nacl_val) + " (" + getOverhead(nacl_val , stock_val) + ")"
             ])
 
 def read(folder, filename):
@@ -87,6 +89,7 @@ def main():
         parsed1 = json.loads(read(inputFolderName, "stock32_terminal_analysis.json"))["data"]
         parsed2 = json.loads(read(inputFolderName, "segmentsfizerocost_terminal_analysis.json"))["data"]
         parsed3 = json.loads(read(inputFolderName, "mpkfullsave32_terminal_analysis.json"))["data"]
-        computeSummary32(os.path.join(inputFolderName, "all_compare32.dat"), parsed1, parsed2, parsed3)
+        parsed4 = json.loads(read(inputFolderName, "naclfullsave32_terminal_analysis.json"))["data"]
+        computeSummary32(os.path.join(inputFolderName, "all_compare32.dat"), parsed1, parsed2, parsed3, parsed4)
 
 main()
