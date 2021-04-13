@@ -108,13 +108,24 @@ void nsJPEGDecoder::getRLBoxSandbox() {
   nsJPEGDecoderSandboxData* chosenSandbox = nullptr;
   size_t chosenSandboxIndex = 0;
 
-  for(auto& sbx : jpeg_sandboxes) {
-    if (!sbx.used) {
-      chosenSandbox = &sbx;
-      break;
+  #if defined(MOZ_WASM_SANDBOXING_NACLFULLSAVE32)
+    // nacl support concurrent use of the same sandbox
+    // also nacl sandboxes take up large parts of memory
+    // so just reuse the existing one instead of creating a new one
+    if (jpeg_sandboxes.size() > 0) {
+      chosenSandboxIndex = 0;
+      chosenSandbox = &jpeg_sandboxes[0];
     }
-    chosenSandboxIndex++;
-  }
+  #else
+    // for other isolation schemes look for a free sandbox
+    for(auto& sbx : jpeg_sandboxes) {
+      if (!sbx.used) {
+        chosenSandbox = &sbx;
+        break;
+      }
+      chosenSandboxIndex++;
+    }
+  #endif
 
   // could not find a sandbox.
   // create a new sandbox at the end of the queue

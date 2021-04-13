@@ -330,8 +330,19 @@ static bool IsCrashReporterEnabled(const char* aArg) {
 
 }  // namespace
 
+#ifdef MOZ_WASM_SANDBOXING_NACLFULLSAVE32
+extern "C" {
+  void NaClCreateManualPrereservedSandboxMemory(void);
+}
+#endif
+
 nsresult XRE_InitChildProcess(int aArgc, char* aArgv[],
                               const XREChildData* aChildData) {
+
+#ifdef MOZ_WASM_SANDBOXING_NACLFULLSAVE32
+  NaClCreateManualPrereservedSandboxMemory();
+#endif
+
   NS_ENSURE_ARG_MIN(aArgc, 2);
   NS_ENSURE_ARG_POINTER(aArgv);
   NS_ENSURE_ARG_POINTER(aArgv[0]);
