@@ -832,3 +832,5 @@ void gfxGraphiteShaper::Shutdown() {
   }
 #endif
 }
+
+#undef SMALL_GLYPH_RUN

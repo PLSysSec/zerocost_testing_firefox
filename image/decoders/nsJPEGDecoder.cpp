@@ -308,7 +308,7 @@ nsJPEGDecoder::~nsJPEGDecoder() {
 
     auto time_ns = mSandbox->get_total_ns_time_in_sandbox_and_transitions();
     std::string tag = "JPEG_destroy(" + mImageString + ")";
-    printf("Capture_Time:%s,%u,%ld|\n", tag.c_str(), jpeg_count, time_ns);
+    printf("Capture_Time:%s,%u,%ld|\n", tag.c_str(), jpeg_count, (long int) time_ns);
     // printf("Fn calls: %d, Callbacks: %d\n", num_fncalls, num_callbacks);
   }
 
