@@ -21,7 +21,7 @@ def getGroups(els):
     return ret
 
 def getOverhead(base, other):
-    return str(base/other)
+    return str(round(base/other, 3))
 
 def computeSummary64(summaryFile, parsed1, parsed2, parsed3, parsed5, parsed6):
     with open(summaryFile, "w") as f:

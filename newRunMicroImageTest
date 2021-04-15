@@ -8,13 +8,20 @@ FFVersions=("zerocost" "fullsave" "regsave" "fullsavewindows" "lucet" "mpkfullsa
 # FFVersions=("naclfullsave32" "mpkfullsave32" "segmentsfizerocost" "stock32")
 
 if [ -z "$1" ]; then
-	echo "Expected argument $0 output_folder";
+	echo "Expected argument $0 output_folder ['random']";
 	exit 1;
 fi
 
 if [[ -f "$1" ]]; then
 	echo "$1 already exists";
 	exit 1;
+fi
+
+if [ -n "$2" ]; then
+	if [[ "$2" != "random" ]]; then
+		echo "Expected argument $0 output_folder ['random']";
+		exit 1;
+	fi
 fi
 
 OUTPUTPATH=$(cd "$(dirname "$1")"; pwd)/$(basename "$1")
@@ -32,6 +39,7 @@ echo "Starting. Make sure to isolate cpus 1 then disable scaling with --- sudo c
 
 # param: outputDir/prefix
 # param: mozconfig
+# param: random
 function runTest(){
 	FINISHED=0
 	for (( l = 0; l < 3; l++ )); do
@@ -39,9 +47,12 @@ function runTest(){
 		pkill -f firefox
 		rm -f ./testing/mozharness/build/local.json
 
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "jpeg_width_perf" 2>&1 | tee "$1_terminal_output.txt"
-		MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "jpeg_black_width_perf" 2>&1 | tee -a "$1_terminal_output.txt"
-		# MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "jpeg_random_width_perf" 2>&1 | tee -a "$1_terminal_output.txt"
+		if [[ "$3" == "random" ]]; then
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "jpeg_random_width_perf" 2>&1 | tee -a "$1_terminal_output.txt"
+		else
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "jpeg_width_perf" 2>&1 | tee "$1_terminal_output.txt"
+			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "jpeg_black_width_perf" 2>&1 | tee -a "$1_terminal_output.txt"
+		fi
 		retVal=${PIPESTATUS[0]}
 		if [ $retVal -eq 0 ]; then
 			FINISHED=1
@@ -63,7 +74,7 @@ function runTest(){
 SAVEDDIR=$PWD
 
 for (( j = 0; j < ${#FFVersions[@]}; j++ )); do
-    runTest "${OUTPUTPATH}/${FFVersions[$j]}" "mozconfig_${FFVersions[$j]}_release"
+    runTest "${OUTPUTPATH}/${FFVersions[$j]}" "mozconfig_${FFVersions[$j]}_release" "$2"
     cd $SAVEDDIR
 done
 
