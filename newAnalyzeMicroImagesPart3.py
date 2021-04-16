@@ -23,26 +23,24 @@ def getGroups(els):
 def getOverhead(base, other):
     return str(round(base/other, 3))
 
-def computeSummary64(summaryFile, parsed1, parsed2, parsed3, parsed5, parsed6):
+def computeSummary64(summaryFile, parsed1, parsed2, parsed3, parsed4):
     with open(summaryFile, "w") as f:
         writer = csv.writer(f)
-        writer.writerow(["Image", "Zerocost", "FullSave", "RegSave", "Lucet", "FullSaveWindows"])
+        writer.writerow(["Image", "Zerocost", "FullSave", "RegSave", "Lucet"])
 
         groups = getGroups(parsed1)
         for group in groups:
             zerocost_val = getMedian(parsed1, group)
             fullsave_val = getMedian(parsed2, group)
             regsave_val = getMedian(parsed3, group)
-            lucet_val = getMedian(parsed5, group)
-            fullsavewindows_val = getMedian(parsed6, group)
+            lucet_val = getMedian(parsed4, group)
 
             writer.writerow([
                 group,
                 str(zerocost_val)        + " (" + getOverhead(zerocost_val       , zerocost_val) + ")",
                 str(fullsave_val)        + " (" + getOverhead(fullsave_val       , zerocost_val) + ")",
                 str(regsave_val)         + " (" + getOverhead(regsave_val        , zerocost_val) + ")",
-                str(lucet_val)           + " (" + getOverhead(lucet_val          , zerocost_val) + ")",
-                str(fullsavewindows_val) + " (" + getOverhead(fullsavewindows_val, zerocost_val) + ")"
+                str(lucet_val)           + " (" + getOverhead(lucet_val          , zerocost_val) + ")"
             ])
 
 def computeSummary32(summaryFile, parsed1, parsed2, parsed3, parsed4):
@@ -82,8 +80,7 @@ def main():
         parsed2 = json.loads(read(inputFolderName, "fullsave_terminal_analysis.json"))["data"]
         parsed3 = json.loads(read(inputFolderName, "regsave_terminal_analysis.json"))["data"]
         parsed4 = json.loads(read(inputFolderName, "lucet_terminal_analysis.json"))["data"]
-        parsed5 = json.loads(read(inputFolderName, "fullsavewindows_terminal_analysis.json"))["data"]
-        computeSummary64(os.path.join(inputFolderName, "all_compare.dat"), parsed1, parsed2, parsed3, parsed4, parsed5)
+        computeSummary64(os.path.join(inputFolderName, "all_compare.dat"), parsed1, parsed2, parsed3, parsed4)
 
     if os.path.exists(os.path.join(inputFolderName, "segmentsfizerocost_terminal_analysis.json")):
         parsed1 = json.loads(read(inputFolderName, "stock32_terminal_analysis.json"))["data"]
