@@ -41,11 +41,10 @@ function runTest(){
 		rm -f ./testing/mozharness/build/local.json
 
 		if [[ "$3" == "segmentsfizerocost" || "$3" == *"32"* ]]; then
-			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee "$1_terminal_output.txt"
-			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
-			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
-			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
-			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+			echo "Start" | tee "$1_terminal_output.txt"
+			for (( k = 0; k < 5; k++ )); do
+				MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test_mini" 2>&1 | tee -a "$1_terminal_output.txt"
+			done
 		else
 			MOZCONFIG=$2 taskset -c 1 ./mach talos-test --activeTests "graphite_perf_test" 2>&1 | tee "$1_terminal_output.txt"
 		fi

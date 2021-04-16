@@ -864,7 +864,7 @@ class jpeg_width_perf(PageloaderTest):
     tpmanifest = '${talos}/tests/jpeg_perf/tests_width.manifest'
     tpcycles = 1
     tploadnocache = True
-    tppagecycles = 500
+    tppagecycles = 100
     tpmozafterpaint = True
     gecko_profile_interval = 1
     gecko_profile_entries = 10000000
@@ -880,7 +880,7 @@ class jpeg_black_width_perf(PageloaderTest):
     tpmanifest = '${talos}/tests/jpeg_perf/tests_width_black.manifest'
     tpcycles = 1
     tploadnocache = True
-    tppagecycles = 500
+    tppagecycles = 100
     tpmozafterpaint = True
     gecko_profile_interval = 1
     gecko_profile_entries = 10000000
@@ -896,7 +896,7 @@ class jpeg_random_width_perf(PageloaderTest):
     tpmanifest = '${talos}/tests/jpeg_perf/tests_width_random.manifest'
     tpcycles = 1
     tploadnocache = True
-    tppagecycles = 500
+    tppagecycles = 100
     tpmozafterpaint = True
     gecko_profile_interval = 1
     gecko_profile_entries = 10000000
