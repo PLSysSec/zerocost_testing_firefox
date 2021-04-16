@@ -7,7 +7,7 @@ import pathlib
 
 def compile(is_cpp, is_32_bit, args):
     currdir = pathlib.Path(__file__).parent.absolute()
-    nacl_src_path = os.path.join(currdir, "..", "rlbox_nacl_sandbox/build_release/_deps/modnacl-src")
+    nacl_src_path = os.path.join(currdir, "..", "Sandboxing_NaCl")
     compiler_path = os.path.join(nacl_src_path, "native_client/toolchain/linux_x86/pnacl_newlib_raw/bin/")
     nacl_wrapper_path = os.path.join(nacl_src_path, "native_client/src/trusted/dyn_ldr/dyn_ldr_sandbox_init.c")
 

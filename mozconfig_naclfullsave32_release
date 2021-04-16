@@ -6,7 +6,7 @@ ac_add_options --with-wasm-sandboxed-libraries=naclfullsave32,graphite,ogg,jpeg
 . $topsrcdir/mozconfig_common
 mk_add_options MOZ_OBJDIR=$BROWSER_BUILD_PATH/firefox_latest_naclfullsave32_release
 
-ac_add_options --with-nacl32-libc=@TOPSRCDIR@/../rlbox_nacl_sandbox/build_release/_deps/modnacl-src/native_client/scons-out-firefox/nacl_irt-x86-32/staging/irt_core.nexe
+ac_add_options --with-nacl32-libc=@TOPSRCDIR@/../Sandboxing_NaCl/native_client/scons-out-firefox/nacl_irt-x86-32/staging/irt_core.nexe
 
 export CROSS_COMPILE=1
 export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig

@@ -108,7 +108,7 @@ elif CONFIG['MOZ_WASM_SANDBOXING_NACLFULLSAVE32']:
     ]
 
     EXPORTS += [
-        '/../rlbox_nacl_sandbox/build_release/_deps/modnacl-src/native_client/src/trusted/dyn_ldr/dyn_ldr_lib.h'
+        '/../Sandboxing_NaCl/native_client/src/trusted/dyn_ldr/dyn_ldr_lib.h'
     ]
 
     SOURCES += [
@@ -116,9 +116,9 @@ elif CONFIG['MOZ_WASM_SANDBOXING_NACLFULLSAVE32']:
     ]
 
     if CONFIG["MOZ_DEBUG"]:
-        OS_LIBS += ['-L$(topsrcdir)/../rlbox_nacl_sandbox/build_release/_deps/modnacl-src/native_client/scons-out-firefox/dbg-linux-x86-32/lib']
+        OS_LIBS += ['-L$(topsrcdir)/../Sandboxing_NaCl/native_client/scons-out-firefox/dbg-linux-x86-32/lib']
     else:
-        OS_LIBS += ['-L$(topsrcdir)/../rlbox_nacl_sandbox/build_release/_deps/modnacl-src/native_client/scons-out-firefox/opt-linux-x86-32/lib']
+        OS_LIBS += ['-L$(topsrcdir)/../Sandboxing_NaCl/native_client/scons-out-firefox/opt-linux-x86-32/lib']
 
     OS_LIBS += [
         '-ldyn_ldr', '-lsel', '-lnacl_error_code', '-lenv_cleanser', '-lnrd_xfer', '-lnacl_perf_counter', '-lnacl_base', '-limc',
