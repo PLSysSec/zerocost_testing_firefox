@@ -16,16 +16,16 @@ def addTestValue(s, group, val):
         s.timings[group] = []
     s.timings[group].append(float(val))
 
-def handle_line(line, s, skipFirstHost):
+def handle_line(line, s, skipFirstHostAndPort):
     if "Capture_Time:" in line:
         fragment = line.split('Capture_Time:')[1].split('|')[0]
         group = fragment.split(',')[0]
-        if skipFirstHost:
+        if skipFirstHostAndPort:
             group = group.split('(')[1].split(')')[0]
             u = urlparse(group)
             if u.scheme == "data":
                 return s
-            u = u._replace(netloc=u.netloc.split('.', 1)[1])
+            u = u._replace(netloc=u.netloc.split('.', 1)[1].split(':', 1)[0])
             group = u.geturl()
         index = fragment.split(',')[1]
         val = fragment.split(',')[2]
@@ -69,13 +69,13 @@ def main():
         print("Expected " + sys.argv[0] + " inputFileName [RemoveFirstSubdomain]")
         exit(1)
     inputFileName = sys.argv[1]
-    skipFirstHost = False
+    skipFirstHostAndPort = False
     if len(sys.argv) >= 3:
-        skipFirstHost = bool(sys.argv[2])
+        skipFirstHostAndPort = bool(sys.argv[2])
     s = PerfState()
     with open(inputFileName) as f:
         for line in f:
-            s = handle_line(line, s, skipFirstHost)
+            s = handle_line(line, s, skipFirstHostAndPort)
 
     print_final_results(s)
 

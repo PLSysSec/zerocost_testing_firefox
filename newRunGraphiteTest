@@ -74,7 +74,7 @@ for (( j = 0; j < ${#FFVersions[@]}; j++ )); do
 done
 
 for (( j = 0; j < ${#FFVersions[@]}; j++ )); do
-	./newAnalyzePerf.py "${OUTPUTPATH}/${FFVersions[$j]}_terminal_output.txt" 2>&1 >> "${OUTPUTPATH}/${FFVersions[$j]}_terminal_analysis.json"
+	./newAnalyzePerf.py "${OUTPUTPATH}/${FFVersions[$j]}_terminal_output.txt" "true" 2>&1 >> "${OUTPUTPATH}/${FFVersions[$j]}_terminal_analysis.json"
 done
 
 ./newAnalyzeMicroImagesPart3.py "${OUTPUTPATH}/"
