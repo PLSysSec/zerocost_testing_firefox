@@ -23,7 +23,7 @@ def getGroups(els):
 def getOverhead(base, other):
     return str(round(base/other, 3))
 
-def computeSummary64(summaryFile, parsed1, parsed2, parsed3, parsed4):
+def computeSummaryWasm(summaryFile, parsed1, parsed2, parsed3, parsed4):
     with open(summaryFile, "w") as f:
         writer = csv.writer(f)
         writer.writerow(["Image", "Zerocost", "FullSave", "RegSave", "Lucet"])
@@ -43,10 +43,26 @@ def computeSummary64(summaryFile, parsed1, parsed2, parsed3, parsed4):
                 str(lucet_val)           + " (" + getOverhead(lucet_val          , zerocost_val) + ")"
             ])
 
+def computeSummary64(summaryFile, parsed1, parsed2):
+    with open(summaryFile, "w") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Image", "Stock", "IdealHeavy"])
+
+        groups = getGroups(parsed1)
+        for group in groups:
+            stock_val = getMedian(parsed1, group)
+            mpk_val = getMedian(parsed2, group)
+
+            writer.writerow([
+                group,
+                str(stock_val)  + " (" + getOverhead(stock_val  , stock_val) + ")",
+                str(mpk_val) + " (" + getOverhead(mpk_val , stock_val) + ")",
+            ])
+
 def computeSummary32(summaryFile, parsed1, parsed2, parsed3, parsed4, parsed5):
     with open(summaryFile, "w") as f:
         writer = csv.writer(f)
-        writer.writerow(["Image", "Stock", "SegmentSFI", "MPK", "NaCl", "StockIndirect"])
+        writer.writerow(["Image", "Stock", "SegmentSFI", "IdealHeavy", "NaCl", "StockIndirect"])
 
         groups = getGroups(parsed1)
         for group in groups:
@@ -82,7 +98,12 @@ def main():
         parsed2 = json.loads(read(inputFolderName, "fullsave_terminal_analysis.json"))["data"]
         parsed3 = json.loads(read(inputFolderName, "regsave_terminal_analysis.json"))["data"]
         parsed4 = json.loads(read(inputFolderName, "lucet_terminal_analysis.json"))["data"]
-        computeSummary64(os.path.join(inputFolderName, "all_compare.dat"), parsed1, parsed2, parsed3, parsed4)
+        computeSummaryWasm(os.path.join(inputFolderName, "all_compareWasm.dat"), parsed1, parsed2, parsed3, parsed4)
+
+    if os.path.exists(os.path.join(inputFolderName, "mpkfullsave_terminal_analysis.json")):
+        parsed1 = json.loads(read(inputFolderName, "stock_terminal_analysis.json"))["data"]
+        parsed2 = json.loads(read(inputFolderName, "mpkfullsave_terminal_analysis.json"))["data"]
+        computeSummary64(os.path.join(inputFolderName, "all_compare64.dat"), parsed1, parsed2)
 
     if os.path.exists(os.path.join(inputFolderName, "segmentsfizerocost_terminal_analysis.json")):
         parsed1 = json.loads(read(inputFolderName, "stock32_terminal_analysis.json"))["data"]
