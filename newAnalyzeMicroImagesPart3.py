@@ -46,7 +46,7 @@ def computeSummaryWasm(summaryFile, parsed1, parsed2, parsed3, parsed4):
 def computeSummary64(summaryFile, parsed1, parsed2):
     with open(summaryFile, "w") as f:
         writer = csv.writer(f)
-        writer.writerow(["Image", "Stock", "IdealHeavy"])
+        writer.writerow(["Image", "Stock64", "IdealHeavy64"])
 
         groups = getGroups(parsed1)
         for group in groups:
